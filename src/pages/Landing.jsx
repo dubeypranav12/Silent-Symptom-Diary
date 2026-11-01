@@ -27,6 +27,17 @@ function HeroArt() {
   );
 }
 
+function scrollToSection(event, id) {
+  event.preventDefault();
+  const section = document.getElementById(id);
+  if (!section) return;
+  section.focus({ preventScroll: true });
+  section.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    block: "start"
+  });
+}
+
 export default function Landing() {
   const start = hasConsent() ? "/home" : "/consent";
   return (
@@ -35,8 +46,8 @@ export default function Landing() {
         <header className="l-nav">
           <Link to="/" className="brand"><i><LuBrain /></i>Silent Symptom Diary</Link>
           <nav className="l-links" aria-label="Main">
-            <a href="#how">How it works</a>
-            <a href="#privacy">Privacy</a>
+            <a href="#how" onClick={(event) => scrollToSection(event, "how")}>How it works</a>
+            <a href="#privacy" onClick={(event) => scrollToSection(event, "privacy")}>Privacy</a>
             <Link className="btn soft" to="/login/patient">Patient log in</Link>
             <Link className="btn soft" to="/login/doctor">Doctor log in</Link>
           </nav>
@@ -67,7 +78,7 @@ export default function Landing() {
             </div>
           </section>
 
-          <section className="l-section" id="how">
+          <section className="l-section" id="how" tabIndex={-1}>
             <h2>How it works</h2>
             <ol className="grid3" style={{ listStyle: "none", padding: 0 }}>
               <li className="step-card"><span className="num">1</span><h3>Check in</h3><p className="muted small">Voice, typing and a steady hold. About 30 seconds a day.</p></li>
@@ -76,7 +87,7 @@ export default function Landing() {
             </ol>
           </section>
 
-          <section className="band" id="privacy">
+          <section className="band" id="privacy" tabIndex={-1}>
             <div className="art"><ShieldArt /></div>
             <div className="txt">
               <h2>Private by design</h2>
