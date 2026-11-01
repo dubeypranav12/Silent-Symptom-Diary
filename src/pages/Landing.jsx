@@ -48,6 +48,7 @@ export default function Landing() {
           <nav className="l-links" aria-label="Main">
             <a href="#how" onClick={(event) => scrollToSection(event, "how")}>How it works</a>
             <a href="#privacy" onClick={(event) => scrollToSection(event, "privacy")}>Privacy</a>
+            <Link className="admin-nav-link" to="/admin">Admin review demo</Link>
             <Link className="btn soft" to="/login/patient">Patient log in</Link>
             <Link className="btn soft" to="/login/doctor">Doctor log in</Link>
           </nav>
@@ -100,8 +101,6 @@ export default function Landing() {
             <Link className="btn white lg" to={start}><FiHeart /> Try the check-in</Link>
           </section>
         </main>
-
-        <p className="admin-demo-shortcut"><Link to="/admin">Admin review demo</Link></p>
 
         <footer className="foot">The Ultimate Descenders · Ajay Kumar Garg Engineering College, Ghaziabad · A prototype concept, not a medical device.</footer>
       </div>
