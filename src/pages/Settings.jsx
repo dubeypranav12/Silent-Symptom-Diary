@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiDownload, FiRefreshCw, FiTrash2, FiLogOut } from "react-icons/fi";
 import { Shell, PageHead } from "../components/Shell.jsx";
-import { STORE, clearAll, dateKey, getCheckins, getNotes, makeSample, read, write } from "../lib/data.js";
+import { STORE, clearAll, dateKey, getCheckins, getContextEntries, getNotes, makeSample, read, write } from "../lib/data.js";
 
 export default function Settings() {
   const nav = useNavigate();
@@ -10,7 +10,7 @@ export default function Settings() {
   const consent = read(STORE.consent, {});
 
   function download() {
-    const blob = new Blob([JSON.stringify({ checkins: getCheckins(), notes: getNotes() }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ checkins: getCheckins(), notes: getNotes(), dailyContext: getContextEntries() }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "silent-symptom-diary-" + dateKey() + ".json";
@@ -25,7 +25,7 @@ export default function Settings() {
   }
   function deleteData() {
     if (!window.confirm("Delete all check-ins and notes from this browser?")) return;
-    localStorage.removeItem(STORE.checkins); localStorage.removeItem(STORE.notes);
+    localStorage.removeItem(STORE.checkins); localStorage.removeItem(STORE.notes); localStorage.removeItem(STORE.context);
     setMsg("All check-ins and notes deleted.");
   }
   function withdraw() {

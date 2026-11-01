@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Navigate, useNavigate, Link } from "react-router-dom";
-import { FiLock, FiUsers, FiHeart } from "react-icons/fi";
+import { FiLock, FiUsers, FiHeart, FiClock } from "react-icons/fi";
 import { ShieldArt } from "../components/Illustrations.jsx";
 import { giveConsent, hasConsent } from "../lib/data.js";
 
 const ITEMS = [
   { Icon: FiLock, text: "Voice is analysed on my phone. Raw audio is never sent." },
   { Icon: FiUsers, text: "Only numbers are shared with my doctor." },
+  { Icon: FiClock, text: "Sleep, stress and work-hour notes are stored in this browser for my personal trends." },
   { Icon: FiHeart, text: "I understand this supports my doctor and is not a diagnosis." }
 ];
 

@@ -1,7 +1,9 @@
 /* Data layer: storage, baseline maths, flags and sample patients.
    Everything lives in this browser's localStorage. Nothing is uploaded. */
 
-export const STORE = { checkins: "ssd_checkins", notes: "ssd_notes", consent: "ssd_consent" };
+export const STORE = { checkins: "ssd_checkins", notes: "ssd_notes", context: "ssd_context", consent: "ssd_consent" };
+export const CONTEXT_BASELINE_DAYS = 7;
+const STRESS_LEVELS = ["low", "medium", "high"];
 
 /* The three signals. For all three, a higher value means more change. */
 export const METRICS = {
@@ -39,6 +41,37 @@ export function saveCheckin(entry) {
   write(STORE.checkins, list);
 }
 export function getNotes() { return read(STORE.notes, {}); }
+export function getContextEntries() {
+  return Object.values(read(STORE.context, {})).filter((entry) => entry && entry.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+export function saveContextEntry(date, entry) {
+  const all = read(STORE.context, {});
+  all[date] = { ...entry, date, savedAt: new Date().toISOString() };
+  write(STORE.context, all);
+}
+export function getContextBaseline(entries = getContextEntries()) {
+  const sample = entries.slice(0, CONTEXT_BASELINE_DAYS);
+  const average = (key) => sample.length ? sample.reduce((total, item) => total + Number(item[key] || 0), 0) / sample.length : 0;
+  const stressValues = sample.map((item) => STRESS_LEVELS.indexOf(item.stressLevel) + 1).sort((a, b) => a - b);
+  const medianStress = stressValues.length ? stressValues[Math.floor(stressValues.length / 2)] : 0;
+  return {
+    n: sample.length,
+    ready: sample.length >= CONTEXT_BASELINE_DAYS,
+    throughDate: sample.length ? sample[sample.length - 1].date : null,
+    sleepHours: average("sleepHours"),
+    workHours: average("workHours"),
+    stressLevel: medianStress ? STRESS_LEVELS[medianStress - 1] : null
+  };
+}
+export function compareContextEntry(entry, baseline) {
+  const stressValue = (level) => STRESS_LEVELS.indexOf(level);
+  return {
+    sleepHours: Number(entry.sleepHours) - baseline.sleepHours,
+    workHours: Number(entry.workHours) - baseline.workHours,
+    stress: stressValue(entry.stressLevel) - stressValue(baseline.stressLevel)
+  };
+}
 export function toggleNote(name) {
   const all = getNotes(), today = dateKey();
   all[today] = all[today] || {};

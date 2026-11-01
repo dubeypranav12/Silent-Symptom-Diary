@@ -53,7 +53,8 @@ src/
 
 ## Notes
 
-- Data stays in the browser (localStorage). Nothing is uploaded.
+- Check-ins, notes, and sleep/stress/work-hour context stay in the browser (localStorage). Nothing is uploaded.
+- Context baselines use the first 7 saved daily entries; later entries show changes against those personal averages and typical stress level.
 - Patients 014 to 033 and anything labelled "sample" are made-up demo data.
 - The admin doctor-review page is a local UI prototype. Real doctor verification and access approval require a secured backend and authoritative credential checks.
 - This is a prototype concept, not a medical device.
