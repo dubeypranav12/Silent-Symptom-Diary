@@ -101,6 +101,8 @@ export default function Landing() {
           </section>
         </main>
 
+        <p className="admin-demo-shortcut"><Link to="/admin">Admin review demo</Link></p>
+
         <footer className="foot">The Ultimate Descenders · Ajay Kumar Garg Engineering College, Ghaziabad · A prototype concept, not a medical device.</footer>
       </div>
     </div>

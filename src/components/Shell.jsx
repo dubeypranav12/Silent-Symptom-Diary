@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { FiHome, FiMic, FiActivity, FiSettings, FiLogOut, FiGrid, FiGlobe, FiBell, FiPlus } from "react-icons/fi";
+import { FiHome, FiMic, FiActivity, FiSettings, FiLogOut, FiGrid, FiGlobe, FiBell, FiPlus, FiShield } from "react-icons/fi";
 import { LuBrain } from "react-icons/lu";
 import { Ring } from "./Charts.jsx";
 import { EmptyArt } from "./Illustrations.jsx";
@@ -14,10 +14,14 @@ const DOCTOR_NAV = [
   { to: "/doctor", icon: FiGrid, label: "Dashboard" },
   { to: "/", icon: FiGlobe, label: "Website" }
 ];
+const ADMIN_NAV = [
+  { to: "/admin", icon: FiShield, label: "Doctor review" },
+  { to: "/", icon: FiGlobe, label: "Website" }
+];
 
 /* Rounded indigo sidebar + content area. `right` is the optional right-hand panel. */
 export function Shell({ role = "patient", right, children }) {
-  const nav = role === "doctor" ? DOCTOR_NAV : PATIENT_NAV;
+  const nav = role === "doctor" ? DOCTOR_NAV : role === "admin" ? ADMIN_NAV : PATIENT_NAV;
   return (
     <div className="window">
       <nav className="sidebar" aria-label="Main">

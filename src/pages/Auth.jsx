@@ -39,7 +39,9 @@ export default function AuthPage({ mode }) {
       navigate(role === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
       return;
     }
-    setMessage("Registration is a design prototype. No account service is connected, and your details were not submitted.");
+    setMessage(role === "doctor"
+      ? "Doctor registration is not active in this prototype. A real service must verify credentials and keep access pending until review. Your details were not submitted."
+      : "Registration is a design prototype. No account service is connected, and your details were not submitted.");
   }
 
   function fillDemoCredentials() {

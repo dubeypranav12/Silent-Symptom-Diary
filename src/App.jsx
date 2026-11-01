@@ -11,6 +11,7 @@ import Settings from "./pages/Settings.jsx";
 import Doctor from "./pages/Doctor.jsx";
 import PatientDetail from "./pages/PatientDetail.jsx";
 import AuthPage from "./pages/Auth.jsx";
+import Admin from "./pages/Admin.jsx";
 
 /* Patient pages need consent first. */
 function Guard({ children }) {
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/settings" element={<Guard><Settings /></Guard>} />
         <Route path="/doctor" element={<Doctor />} />
         <Route path="/doctor/patient/:id" element={<PatientDetail />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

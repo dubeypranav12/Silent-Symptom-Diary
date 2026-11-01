@@ -293,6 +293,23 @@ h1[tabindex="-1"]:focus{outline:none}
 .auth-footer{text-align:center;color:var(--muted);font-size:12px}
 .auth-shortcuts{margin-top:14px;color:var(--muted);font-size:13px}
 .auth-shortcuts span{padding:0 6px}
+.admin-demo-shortcut{padding:0 10px;color:var(--muted);font-size:12px}
+.admin-demo-shortcut a{color:var(--indigo-d);font-weight:600}
+.admin-demo-warning{display:flex;align-items:flex-start;gap:12px;border:1px solid #F3C58D;background:#FFF6E9;color:#704308;border-radius:18px;padding:16px 18px}
+.admin-demo-warning>svg{flex:none;font-size:22px;margin-top:2px}
+.admin-demo-warning b{display:block;margin-bottom:3px}
+.admin-demo-warning p{font-size:13px;line-height:1.55}
+.admin-applications{display:grid;gap:14px}
+.admin-application{border:1px solid var(--lav3);border-radius:18px;padding:18px;display:grid;gap:14px}
+.admin-application-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.admin-application-head h3{margin-top:8px}
+.admin-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:0}
+.admin-details div{min-width:0}
+.admin-details dt{color:var(--muted);font-size:11px}
+.admin-details dd{margin:3px 0 0;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.admin-actions{display:flex;gap:10px;flex-wrap:wrap}
+.admin-actions .btn{min-height:42px;padding:0 16px;font-size:13px}
+.admin-empty{padding:20px 0}
 @media (max-width:760px){
   .auth-layout{gap:20px;padding:0 0 10px}
   .auth-main{grid-template-columns:minmax(0,1fr);max-width:520px}

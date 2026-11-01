@@ -29,6 +29,7 @@ Microphone and motion sensors need HTTPS or localhost. To try it on a phone, dep
 | `/settings` | Download, sample history, delete, withdraw |
 | `/doctor` | Doctor dashboard |
 | `/doctor/patient/:id` | One patient (try `014`, `027`, or `me`) |
+| `/admin` | Demo-only doctor application review queue; not secured or connected to identity verification |
 
 ## Folders
 
@@ -54,4 +55,5 @@ src/
 
 - Data stays in the browser (localStorage). Nothing is uploaded.
 - Patients 014 to 033 and anything labelled "sample" are made-up demo data.
+- The admin doctor-review page is a local UI prototype. Real doctor verification and access approval require a secured backend and authoritative credential checks.
 - This is a prototype concept, not a medical device.
