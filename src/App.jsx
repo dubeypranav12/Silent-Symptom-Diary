@@ -10,6 +10,7 @@ import Trends from "./pages/Trends.jsx";
 import Settings from "./pages/Settings.jsx";
 import Doctor from "./pages/Doctor.jsx";
 import PatientDetail from "./pages/PatientDetail.jsx";
+import AuthPage from "./pages/Auth.jsx";
 
 /* Patient pages need consent first. */
 function Guard({ children }) {
@@ -29,6 +30,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/consent" element={<Consent />} />
+        <Route path="/login/:role" element={<AuthPage mode="login" />} />
+        <Route path="/register/:role" element={<AuthPage mode="register" />} />
         <Route path="/home" element={<Guard><Home /></Guard>} />
         <Route path="/checkin" element={<Guard><CheckIn /></Guard>} />
         <Route path="/result" element={<Guard><Result /></Guard>} />

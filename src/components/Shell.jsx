@@ -1,5 +1,6 @@
 import { NavLink, Link } from "react-router-dom";
 import { FiHome, FiMic, FiActivity, FiSettings, FiLogOut, FiGrid, FiSmartphone, FiGlobe, FiBell, FiPlus } from "react-icons/fi";
+import { LuBrain } from "react-icons/lu";
 import { Ring } from "./Charts.jsx";
 import { EmptyArt } from "./Illustrations.jsx";
 
@@ -29,7 +30,10 @@ export function Shell({ role = "patient", right, children }) {
         <Link to="/" className="sb-link sb-end" aria-label="Back to website" title="Back to website"><FiLogOut /></Link>
       </nav>
       <div className={"layout" + (right ? "" : " no-right")}>
-        <main className="main">{children}</main>
+        <main className="main">
+          <Link to="/" className="app-brand"><i aria-hidden="true"><LuBrain /></i><span>Silent Symptom Diary</span></Link>
+          {children}
+        </main>
         {right}
       </div>
     </div>
