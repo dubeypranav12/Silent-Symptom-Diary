@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { FiHome, FiMic, FiActivity, FiSettings, FiLogOut, FiGrid, FiSmartphone, FiGlobe, FiBell, FiPlus } from "react-icons/fi";
+import { FiHome, FiMic, FiActivity, FiSettings, FiLogOut, FiGrid, FiGlobe, FiBell, FiPlus } from "react-icons/fi";
 import { LuBrain } from "react-icons/lu";
 import { Ring } from "./Charts.jsx";
 import { EmptyArt } from "./Illustrations.jsx";
@@ -12,7 +12,6 @@ const PATIENT_NAV = [
 ];
 const DOCTOR_NAV = [
   { to: "/doctor", icon: FiGrid, label: "Dashboard" },
-  { to: "/home", icon: FiSmartphone, label: "Patient app" },
   { to: "/", icon: FiGlobe, label: "Website" }
 ];
 
