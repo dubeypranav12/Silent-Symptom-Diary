@@ -273,6 +273,14 @@ h1[tabindex="-1"]:focus{outline:none}
 .auth-switch{text-align:center;font-size:13px;padding-top:2px}
 .auth-switch a,.auth-shortcuts a,.auth-role-switch a{color:var(--indigo-d);font-weight:600}
 .auth-prototype{min-height:38px;border-radius:12px;background:var(--lav2);padding:10px 12px;color:var(--muted);font-size:11px!important;line-height:1.5}
+.demo-login{display:grid;gap:8px;background:#F8F8FF;border:1px solid var(--lav3);border-radius:16px;padding:14px}
+.demo-login>div{display:grid;gap:2px}
+.demo-login>div b{font-size:13px}
+.demo-login>div span{font-size:11px;color:var(--muted)}
+.demo-login dl{display:grid;grid-template-columns:70px minmax(0,1fr);gap:4px 8px;margin:0;font-size:11px}
+.demo-login dt{color:var(--muted)}
+.demo-login dd{margin:0;color:var(--ink);font-weight:500;overflow-wrap:anywhere}
+.demo-login .link-btn{justify-self:start;min-height:34px;padding:0;font-size:12px}
 .auth-aside{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:14px;border-radius:28px;padding:clamp(26px,4vw,42px);background:var(--indigo);color:#fff}
 .auth-aside::after{content:"";position:absolute;right:-92px;top:-85px;width:250px;height:250px;border-radius:50%;background:rgba(255,255,255,.08)}
 .auth-aside-icon{position:relative;z-index:1;width:54px;height:54px;border-radius:17px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:26px}

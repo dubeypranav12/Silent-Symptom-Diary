@@ -1,12 +1,21 @@
 import { useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiLock, FiMail, FiUser } from "react-icons/fi";
 import { LuBrain } from "react-icons/lu";
+import { hasConsent } from "../lib/data.js";
+
+const DEMO_ACCOUNTS = {
+  patient: { email: "patient.demo@silentdiary.app", password: "PatientDemo123" },
+  doctor: { email: "doctor.demo@silentdiary.app", password: "DoctorDemo123" }
+};
 
 export default function AuthPage({ mode }) {
   const { role } = useParams();
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   if (role !== "patient" && role !== "doctor") return <Navigate to="/" replace />;
 
   const isRegister = mode === "register";
@@ -21,7 +30,22 @@ export default function AuthPage({ mode }) {
       setMessage("Those passwords don’t match. Please check them and try again.");
       return;
     }
-    setMessage("This is a design prototype. Account sign-in is not connected yet, and your details were not submitted.");
+    if (!isRegister) {
+      const demo = DEMO_ACCOUNTS[role];
+      if (email.trim().toLowerCase() !== demo.email || password !== demo.password) {
+        setMessage("Those details don’t match this demo account. Use the demo credentials shown below.");
+        return;
+      }
+      navigate(role === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
+      return;
+    }
+    setMessage("Registration is a design prototype. No account service is connected, and your details were not submitted.");
+  }
+
+  function fillDemoCredentials() {
+    setEmail(DEMO_ACCOUNTS[role].email);
+    setPassword(DEMO_ACCOUNTS[role].password);
+    setMessage("Demo credentials filled. Select the sign-in button to continue.");
   }
 
   return (
@@ -49,11 +73,11 @@ export default function AuthPage({ mode }) {
               </label>}
               <label className="auth-field">
                 <span>{role === "doctor" ? "Work email" : "Email address"}</span>
-                <span className="input-wrap"><FiMail aria-hidden="true" /><input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></span>
+                <span className="input-wrap"><FiMail aria-hidden="true" /><input name="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></span>
               </label>
               <label className="auth-field">
                 <span>Password</span>
-                <span className="input-wrap"><FiLock aria-hidden="true" /><input name="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "Create a password" : "Enter your password"} minLength={8} required /></span>
+                <span className="input-wrap"><FiLock aria-hidden="true" /><input name="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "Create a password" : "Enter your password"} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></span>
               </label>
               {isRegister && <label className="auth-field">
                 <span>Confirm password</span>
@@ -63,8 +87,14 @@ export default function AuthPage({ mode }) {
               <button type="submit" className="btn lg block">{isRegister ? `Create ${roleName.toLowerCase()} account` : `Sign in as ${roleName.toLowerCase()}`}</button>
             </form>
 
+            {!isRegister && <section className="demo-login" aria-label={`${roleName} demo account`}>
+              <div><b>{roleName} demo account</b><span>Use these sample credentials to preview the {roleName.toLowerCase()} experience.</span></div>
+              <dl><dt>Email</dt><dd>{DEMO_ACCOUNTS[role].email}</dd><dt>Password</dt><dd>{DEMO_ACCOUNTS[role].password}</dd></dl>
+              <button type="button" className="link-btn" onClick={fillDemoCredentials}>Fill demo credentials</button>
+            </section>}
+
             <p className="auth-switch">{isRegister ? "Already registered?" : "New to Silent Symptom Diary?"} <Link to={destination}>{isRegister ? "Sign in" : "Create an account"}</Link></p>
-            <p className="auth-prototype" role="status" aria-live="polite">{message || "Prototype preview: authentication is not connected yet."}</p>
+            <p className="auth-prototype" role="status" aria-live="polite">{message || (isRegister ? "Prototype preview: registration is not connected yet." : "Demo sign-in works locally; there is no real account service connected.")}</p>
           </section>
 
           <aside className="auth-aside">
