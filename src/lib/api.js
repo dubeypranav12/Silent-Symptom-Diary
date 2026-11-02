@@ -8,7 +8,7 @@ import axios from "axios";
  * JWT Bearer token authentication with Axios Interceptors
  */
 
-const RAW_URL = import.meta.env.VITE_API_URL || "https://silent-symptom-diary.onrender.com";
+const RAW_URL = import.meta.env.VITE_API_URL || "https://silent-symptom-diary.onrender.com/api";
 const cleanBase = RAW_URL.trim().replace(/\/+$/, "");
 export const API_BASE_URL = cleanBase.endsWith("/api") ? cleanBase : `${cleanBase}/api`;
 
