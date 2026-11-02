@@ -53,7 +53,8 @@ src/
 
 ## Notes
 
-- Check-ins, notes, and sleep/stress/work-hour context stay in the browser (localStorage). Nothing is uploaded.
+- Check-ins, notes, and sleep/stress/work-hour context stay in the browser (localStorage). The measurements API is not connected yet; nothing is uploaded.
+- The check-in keeps only calculated numeric features. Raw microphone data, typed characters, and motion samples are processed in memory and cleared; unavailable measurements are stored as `null`, not replaced with sample values.
 - Context baselines use the first 7 saved daily entries; later entries show changes against those personal averages and typical stress level.
 - Patients 014 to 033 and anything labelled "sample" are made-up demo data.
 - The admin doctor-review page is a local UI prototype. Real doctor verification and access approval require a secured backend and authoritative credential checks.

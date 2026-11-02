@@ -85,7 +85,7 @@ export default function PatientDetail() {
           </div>
         </div>
         {a.base.ready
-          ? <TrendChart series={METRIC_KEYS.map((k) => ({ label: METRICS[k].label, color: METRICS[k].color, values: a.z[k].slice(-n) }))} dates={a.dates.slice(-n)} flagFrom={flagFrom} label="Tremor, speech and typing compared with the patient's usual range" />
+          ? <TrendChart series={METRIC_KEYS.map((k) => ({ label: METRICS[k].label, color: METRICS[k].color, values: a.z[k].slice(-n) }))} dates={a.dates.slice(-n)} flagFrom={flagFrom} label="Motion variability, speech and typing compared with the patient's usual range" />
           : <Empty text={`Learning baseline: ${a.base.n} of ${BASELINE_DAYS} check-ins`} />}
         <div className="legend" style={{ marginTop: 8 }}>
           {METRIC_KEYS.map((k) => <span key={k}><i style={{ background: METRICS[k].color, borderRadius: "50%" }} />{METRICS[k].label}</span>)}

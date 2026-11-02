@@ -6,7 +6,7 @@ import { giveConsent, hasConsent } from "../lib/data.js";
 
 const ITEMS = [
   { Icon: FiLock, text: "Voice is analysed on my phone. Raw audio is never sent." },
-  { Icon: FiUsers, text: "Only numbers are shared with my doctor." },
+  { Icon: FiUsers, text: "If a backend is connected, only calculated numerical features are sent; raw audio, typed words and motion samples are not." },
   { Icon: FiClock, text: "Sleep, stress and work-hour notes are stored in this browser for my personal trends." },
   { Icon: FiHeart, text: "I understand this supports my doctor and is not a diagnosis." }
 ];

@@ -34,9 +34,9 @@ export default function Trends() {
       </PageHead>
 
       <section className="card">
-        {a.base.ready
+        {a.base[metric].ready
           ? <TrendChart series={[{ label: S.label, color: S.color, values: a.z[metric].slice(-SHOWN) }]} dates={a.dates.slice(-SHOWN)} label={S.label + " trend against your usual range"} />
-          : <Empty text={list.length ? `Learning your baseline: ${a.base.n} of ${BASELINE_DAYS} check-ins. Your trend appears after that.` : "No check-ins yet. Your first one takes about 30 seconds."} />}
+          : <Empty text={list.length ? `Learning this signal's baseline: ${a.base[metric].n} of ${BASELINE_DAYS} successful measurements.` : "No check-ins yet. Your first one takes about 30 seconds."} />}
         <p className="muted small" style={{ marginTop: 8 }}>The shaded area is your usual range.</p>
       </section>
 
@@ -64,7 +64,7 @@ export default function Trends() {
         <p className="context-note">Changes in sleep, stress or work hours are personal context; they don’t automatically mean improvement or decline.</p>
       </section>
 
-      {a.base.ready && (
+      {a.base[metric].ready && Number.isFinite(a.latest?.entry[metric]) && (
         <section className="card">
           <span className={"chip " + (flagged ? "warn" : "ok")}>{flagged ? "Sustained change" : "Within usual range"}</span>
           <p style={{ marginTop: 10 }}>

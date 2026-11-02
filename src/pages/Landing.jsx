@@ -15,8 +15,8 @@ function HeroArt() {
       <div className="hero-phone">
         <span className="chip info" style={{ justifySelf: "center" }}>Today's check-in</span>
         <div className="chart-card">
-          <h3 style={{ fontSize: 13 }}>Tremor · sample</h3>
-          <MiniArea values={a.z.tremor.slice(-14)} big={fmtChange(a.latest.change.tremor)} caption="Sample tremor trend" />
+          <h3 style={{ fontSize: 13 }}>Motion variability · sample</h3>
+          <MiniArea values={a.z.tremor.slice(-14)} big={fmtChange(a.latest.change.tremor)} caption="Sample motion variability trend" />
         </div>
         <div className="pill-screen">Sustained change noted</div>
       </div>
@@ -73,9 +73,9 @@ export default function Landing() {
             <h2>Three signals, one daily habit</h2>
             <p className="muted">Each reading takes seconds and uses sensors already in the phone.</p>
             <div className="grid3">
-              <article className="signal-card"><div className="art"><VoiceArt /></div><h3>Voice</h3><p className="muted small">A 5-second “aaah” sample is checked for quiet pauses, with speech indicators shown on your result card.</p></article>
+              <article className="signal-card"><div className="art"><VoiceArt /></div><h3>Voice</h3><p className="muted small">Read a fixed sentence aloud. Speech duration and pause count are calculated on this device; no transcript is created.</p></article>
               <article className="signal-card"><div className="art"><TypingArt /></div><h3>Typing</h3><p className="muted small">We compare the timing between key presses. Key holds and typing errors are recorded as context.</p></article>
-              <article className="signal-card"><div className="art"><MotionArt /></div><h3>Phone tremor</h3><p className="muted small">Phone movement is checked for shaking energy in the 3–12 Hz range.</p></article>
+              <article className="signal-card"><div className="art"><MotionArt /></div><h3>Phone motion</h3><p className="muted small">A motion variability feature is calculated on this device. It is not a tremor amplitude measurement.</p></article>
             </div>
           </section>
 
@@ -84,7 +84,7 @@ export default function Landing() {
             <ol className="grid3" style={{ listStyle: "none", padding: 0 }}>
               <li className="step-card"><span className="num">1</span><h3>Check in</h3><p className="muted small">Voice, typing and a steady hold. About 30 seconds a day.</p></li>
               <li className="step-card"><span className="num">2</span><h3>Compare with your own baseline</h3><p className="muted small">The first 7 days set what is normal for you. Only sustained changes are flagged, not one bad day.</p></li>
-              <li className="step-card"><span className="num">3</span><h3>Doctor sees the trend</h3><p className="muted small">A clear chart between clinic visits, with optional notes on medicine and sleep.</p></li>
+              <li className="step-card"><span className="num">3</span><h3>Review your trend</h3><p className="muted small">See your measurements and optional notes on this device. Backend sync is not connected yet.</p></li>
             </ol>
           </section>
 
@@ -93,8 +93,8 @@ export default function Landing() {
             <div className="txt">
               <h2>Private by design</h2>
               <ul className="ticks">
-                <li><FiCheck />Voice is analysed on the phone. Raw audio is never stored or sent.</li>
-                <li><FiCheck />Only numbers are shared with the doctor, and only after consent.</li>
+                <li><FiCheck />Voice is analysed on the phone. Raw audio and transcripts are never stored or sent.</li>
+                <li><FiCheck />Typed characters and raw motion samples are not retained. Derived numbers stay on this device; backend sync is not connected yet.</li>
                 <li><FiCheck />The app tracks change. It does not diagnose, and a doctor makes every clinical decision.</li>
               </ul>
             </div>

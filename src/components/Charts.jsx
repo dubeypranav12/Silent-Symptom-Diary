@@ -5,7 +5,7 @@ import { Z_LIMIT, prettyDate } from "../lib/data.js";
 export function TrendChart({ series, dates, flagFrom, label, empty = "No data yet" }) {
   const W = 600, H = 240, L = 54, R = 14, T = 14, B = 30;
   const n = dates.length;
-  if (!n || !series.length || !series[0].values.length) {
+  if (!n || !series.length || !series.some((s) => s.values.some(Number.isFinite))) {
     return (
       <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={empty}>
         <text x={W / 2} y={H / 2} textAnchor="middle">{empty}</text>
@@ -13,7 +13,7 @@ export function TrendChart({ series, dates, flagFrom, label, empty = "No data ye
     );
   }
   let top = 3;
-  series.forEach((s) => s.values.forEach((v) => { if (v > top) top = v; }));
+  series.forEach((s) => s.values.forEach((v) => { if (Number.isFinite(v) && v > top) top = v; }));
   const yMax = Math.min(8, Math.ceil(top + 0.5)), yMin = -3;
   const y = (v) => T + (H - T - B) * (1 - (Math.max(yMin, Math.min(yMax, v)) - yMin) / (yMax - yMin));
   const x = (i) => (n === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (n - 1));
@@ -31,13 +31,23 @@ export function TrendChart({ series, dates, flagFrom, label, empty = "No data ye
           <text x={x(flagFrom) + 6} y={T + 10} fill="#C72D55" style={{ fill: "#C72D55" }}>Change starts</text>
         </g>
       )}
-      {series.map((s) => (
-        <g key={s.label}>
-          <polyline fill="none" stroke={s.color} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round"
-            points={s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")} />
-          <circle cx={x(s.values.length - 1)} cy={y(s.values[s.values.length - 1])} r="5.5" fill="#fff" stroke={s.color} strokeWidth="3" />
-        </g>
-      ))}
+      {series.map((s) => {
+        const segments = [], current = [];
+        s.values.forEach((v, i) => {
+          if (Number.isFinite(v)) current.push([i, v]);
+          else if (current.length) segments.push(current.splice(0));
+        });
+        if (current.length) segments.push(current);
+        const lastSegment = segments[segments.length - 1];
+        const last = lastSegment && lastSegment[lastSegment.length - 1];
+        return (
+          <g key={s.label}>
+            {segments.map((segment, i) => <polyline key={i} fill="none" stroke={s.color} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round"
+              points={segment.map(([index, v]) => `${x(index).toFixed(1)},${y(v).toFixed(1)}`).join(" ")} />)}
+            {last && <circle cx={x(last[0])} cy={y(last[1])} r="5.5" fill="#fff" stroke={s.color} strokeWidth="3" />}
+          </g>
+        );
+      })}
       <text x={x(0)} y={H - 8} textAnchor={n === 1 ? "middle" : "start"}>{prettyDate(dates[0])}</text>
       {n > 1 && <text x={x(n - 1)} y={H - 8} textAnchor="end">{prettyDate(dates[n - 1])}</text>}
     </svg>
@@ -46,7 +56,9 @@ export function TrendChart({ series, dates, flagFrom, label, empty = "No data ye
 
 /* Smooth area chart for the indigo card in the right panel. */
 export function MiniArea({ values, caption, big }) {
+  values = values.filter(Number.isFinite);
   const W = 280, H = 130, P = 14, n = values.length;
+  if (!n) return <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={caption}><text x={W / 2} y={H / 2} textAnchor="middle">No measured values yet</text></svg>;
   const lo = Math.min(-1, ...values), hi = Math.max(3, ...values);
   const x = (i) => P + (i * (W - 2 * P)) / Math.max(1, n - 1);
   const y = (v) => 20 + (H - 52) * (1 - (v - lo) / (hi - lo));

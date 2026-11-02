@@ -7,7 +7,7 @@ const STRESS_LEVELS = ["low", "medium", "high"];
 
 /* The three signals. For all three, a higher value means more change. */
 export const METRICS = {
-  tremor: { label: "Tremor", from: "Phone tremor", color: "#5B61EC", tint: "#E6E9FF" },
+  tremor: { label: "Motion variability", from: "Phone motion", color: "#5B61EC", tint: "#E6E9FF" },
   speech: { label: "Speech", from: "Voice", color: "#1FB5CC", tint: "#D9F5FA" },
   typing: { label: "Typing", from: "Typing", color: "#FF9F43", tint: "#FFEBD6" }
 };
@@ -89,14 +89,18 @@ export const stdev = (a) => { const m = mean(a); return Math.sqrt(mean(a.map((x)
 
 /* Baseline = average and spread of the first 7 check-ins (the patient's own history). */
 export function getBaseline(list) {
-  const first = list.slice(0, BASELINE_DAYS);
-  const base = { n: first.length, ready: first.length >= BASELINE_DAYS };
-  if (first.length) {
-    METRIC_KEYS.forEach((k) => {
-      const v = first.map((e) => e[k]), m = mean(v);
-      base[k] = { mean: m, sd: Math.max(stdev(v), Math.abs(m) * 0.05) }; // floor stops tiny spreads exploding
-    });
-  }
+  const base = { n: Math.min(list.length, BASELINE_DAYS), ready: false };
+  METRIC_KEYS.forEach((k) => {
+    const v = list.map((e) => e[k]).filter(Number.isFinite).slice(0, BASELINE_DAYS);
+    const m = v.length ? mean(v) : null;
+    base[k] = {
+      n: v.length,
+      ready: v.length >= BASELINE_DAYS,
+      mean: m,
+      sd: v.length ? Math.max(stdev(v), Math.abs(m) * 0.05) : null
+    };
+  });
+  base.ready = METRIC_KEYS.every((k) => base[k].ready);
   return base;
 }
 
@@ -105,10 +109,10 @@ export function analyse(list) {
   const base = getBaseline(list);
   const out = { base, dates: list.map((e) => e.date), z: {}, flagged: [], latest: null, count: list.length };
   METRIC_KEYS.forEach((k) => {
-    out.z[k] = base.ready ? list.map((e) => (e[k] - base[k].mean) / base[k].sd) : [];
-    if (base.ready) {
+    out.z[k] = base[k].ready ? list.map((e) => Number.isFinite(e[k]) ? (e[k] - base[k].mean) / base[k].sd : null) : [];
+    if (base[k].ready) {
       const recent = out.z[k].slice(-FLAG_WINDOW);
-      if (recent.filter((z) => z >= Z_LIMIT).length >= FLAG_NEEDED) out.flagged.push(k);
+      if (recent.filter((z) => Number.isFinite(z) && z >= Z_LIMIT).length >= FLAG_NEEDED) out.flagged.push(k);
     }
   });
   if (list.length) {
@@ -116,8 +120,19 @@ export function analyse(list) {
     out.latest = { entry: last, change: {}, z: {} };
     if (base.ready) {
       METRIC_KEYS.forEach((k) => {
-        out.latest.z[k] = out.z[k][list.length - 1];
-        out.latest.change[k] = (last[k] / base[k].mean - 1) * 100;
+        if (base[k].ready && Number.isFinite(last[k])) {
+          out.latest.z[k] = out.z[k][list.length - 1];
+          out.latest.change[k] = base[k].mean === 0 ? null : (last[k] / base[k].mean - 1) * 100;
+        } else {
+          out.latest.z[k] = null;
+          out.latest.change[k] = null;
+        }
+      });
+    } else {
+      METRIC_KEYS.forEach((k) => {
+        out.latest.z[k] = base[k].ready && Number.isFinite(last[k]) ? out.z[k][list.length - 1] : null;
+        out.latest.change[k] = base[k].ready && Number.isFinite(last[k]) && base[k].mean !== 0
+          ? (last[k] / base[k].mean - 1) * 100 : null;
       });
     }
   }
@@ -125,11 +140,12 @@ export function analyse(list) {
 }
 
 export function describeZ(z) {
+  if (!Number.isFinite(z)) return { text: "Unavailable", tone: "info" };
   if (z >= Z_LIMIT) return { text: "Higher than usual", tone: "warn" };
   if (z <= -Z_LIMIT) return { text: "Lower than usual", tone: "warn" };
   return { text: "Within usual range", tone: "ok" };
 }
-export const fmtChange = (p) => (p >= 0 ? "+" : "\u2212") + Math.abs(Math.round(p)) + "%";
+export const fmtChange = (p) => Number.isFinite(p) ? (p >= 0 ? "+" : "\u2212") + Math.abs(Math.round(p)) + "%" : "—";
 
 /* Days in a row ending today (or yesterday, so the streak survives until you check in). */
 export function streak(list) {
@@ -153,7 +169,7 @@ export function dayStatus(list, a, key) {
   const i = list.findIndex((e) => e.date === key);
   if (i < 0) return "none";
   if (!a.base.ready) return "learn";
-  return METRIC_KEYS.some((k) => a.z[k][i] >= Z_LIMIT) ? "warn" : "ok";
+  return METRIC_KEYS.some((k) => Number.isFinite(a.z[k][i]) && a.z[k][i] >= Z_LIMIT) ? "warn" : "ok";
 }
 
 /* ---------- sample patients (always labelled as sample in the UI) ---------- */

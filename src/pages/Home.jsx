@@ -50,20 +50,25 @@ export default function Home() {
   const items = METRIC_KEYS.map((k) => {
     const S = SIGNALS[k];
     let tag = <span className="chip info">Learning</span>;
-    if (a.base.ready && a.latest) {
+    if (!a.latest || !Number.isFinite(a.latest.entry[k])) {
+      tag = <span className="chip info">Unavailable</span>;
+    } else if (a.base[k].ready) {
       const d = describeZ(a.latest.z[k]);
-      tag = <span className={"chip " + d.tone}>{d.tone === "ok" ? "In range" : a.latest.z[k] > 0 ? "Higher" : "Lower"}</span>;
+      tag = <span className={"chip " + d.tone}>{d.text}</span>;
+    } else {
+      tag = <span className="chip info">Learning {a.base[k].n}/{BASELINE_DAYS}</span>;
     }
     return { lead: <span className="lead-ic" style={{ background: S.color }}><S.Icon /></span>, title: S.label, sub: S.from, tag };
   });
 
-  const chart = a.base.ready
+  const chartMetric = METRIC_KEYS.find((k) => a.base[k].ready && a.latest && Number.isFinite(a.latest.entry[k]));
+  const chart = chartMetric
     ? (
-      <ChartCard title="Tremor trend" sub="Last 14 check-ins">
-        <MiniArea values={a.z.tremor.slice(-14)} big={fmtChange(a.latest.change.tremor)} caption="Tremor trend compared with your usual range" />
+      <ChartCard title={`${SIGNALS[chartMetric].label} trend`} sub="Last 14 check-ins">
+        <MiniArea values={a.z[chartMetric].slice(-14)} big={fmtChange(a.latest.change[chartMetric])} caption={`${SIGNALS[chartMetric].label} trend compared with your usual range`} />
       </ChartCard>
     )
-    : <div className="panel"><Empty text={`Learning your baseline: ${a.base.n} of ${BASELINE_DAYS} check-ins`} /></div>;
+    : <div className="panel"><Empty text="Collecting successful measurements to establish personal baselines." /></div>;
 
   return (
     <Shell right={
