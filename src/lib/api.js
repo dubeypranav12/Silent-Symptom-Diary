@@ -1,26 +1,30 @@
 import axios from "axios";
 
 /**
- * Silent Symptom Diary - API Client with Axios Interceptors
+ * Silent Symptom Diary - Backend API Integration Client
  * 
- * Manages JWT authentication, automatic token attachment via request interceptors,
- * and centralized 401/403 error handling via response interceptors.
+ * Configured according to the Backend API Integration Guide:
+ * Base URL: https://silent-symptom-diary.onrender.com/api
+ * JWT Bearer token authentication with Axios Interceptors
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://silent-symptom-diary.onrender.com/";
+const RAW_URL = import.meta.env.VITE_API_URL || "https://silent-symptom-diary.onrender.com";
+const cleanBase = RAW_URL.trim().replace(/\/+$/, "");
+export const API_BASE_URL = cleanBase.endsWith("/api") ? cleanBase : `${cleanBase}/api`;
+
 const TOKEN_KEY = "token";
 const ROLE_KEY = "userRole";
 
-// 1. Create a dedicated Axios instance
+// 1. Central Axios Instance
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json"
   },
-  timeout: 15000
+  timeout: 20000
 });
 
-// Helper auth utilities
+// Auth token & storage helpers
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -46,12 +50,11 @@ export function isAuthenticated() {
   return Boolean(getToken());
 }
 
-// 2. Request Interceptor: automatically attaches the JWT VIP pass to every outgoing request
+// 2. Request Interceptor: automatically attaches the Bearer token
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
     if (token) {
-      // Matches backend: req.headers.authorization.startsWith('Bearer')
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -59,7 +62,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 3. Response Interceptor: centralized handling for 401 Unauthorized & 403 Forbidden
+// 3. Response Interceptor: centralized error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -69,7 +72,6 @@ apiClient.interceptors.response.use(
     if (status === 401) {
       console.error("Session expired or invalid token. Redirecting to login...", backendMessage);
       clearAuth();
-      // Dispatch an event so React components or router can react cleanly without hard reload
       window.dispatchEvent(
         new CustomEvent("auth:unauthorized", { detail: { message: backendMessage } })
       );
@@ -84,22 +86,60 @@ apiClient.interceptors.response.use(
   }
 );
 
-// ==========================================
-// API Helper Functions
-// ==========================================
+// ==========================================================
+// A. Authentication Endpoints (/api/auth)
+// ==========================================================
 
 /**
- * Public route: Authenticate a user and store JWT token + role in localStorage
+ * Register a new user (patient or doctor)
+ * POST /api/auth/register
+ * @param {{ name: string, email: string, password: string, role: 'patient' | 'doctor' }} payload
+ */
+export async function registerUser({ name, email, password, role = "patient" }) {
+  try {
+    const response = await apiClient.post("/auth/register", {
+      name,
+      email,
+      password,
+      role
+    });
+
+    const token = response.data?.token || response.data?.data?.token;
+    const user = response.data?.user || response.data?.data?.user;
+
+    if (token) setToken(token);
+    if (user?.role || role) setUserRole(user?.role || role);
+
+    return {
+      success: true,
+      data: response.data?.data || response.data,
+      token,
+      user,
+      message: response.data?.message
+    };
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || "Registration failed";
+    console.error("Registration error:", message);
+    return {
+      success: false,
+      error: message,
+      status: error.response?.status
+    };
+  }
+}
+
+/**
+ * Sign in existing user
+ * POST /api/auth/login
  * @param {string} email
  * @param {string} password
- * @returns {Promise<{ success: boolean, token?: string, user?: object, error?: string }>}
  */
 export async function loginUser(email, password) {
   try {
     const response = await apiClient.post("/auth/login", { email, password });
 
-    // Backend sends { success: true, token: "...", user: { ... } }
-    const { token, user } = response.data || {};
+    const token = response.data?.token || response.data?.data?.token;
+    const user = response.data?.user || response.data?.data?.user;
 
     if (token) setToken(token);
     if (user?.role) setUserRole(user.role);
@@ -109,78 +149,172 @@ export async function loginUser(email, password) {
       success: true,
       token,
       user,
-      data: response.data
+      data: response.data?.data || response.data,
+      message: response.data?.message
     };
   } catch (error) {
-    const errorMessage = error.response?.data?.message || error.message || "Login failed";
-    console.error("Login failed:", errorMessage);
+    const message = error.response?.data?.message || error.message || "Login failed";
+    console.error("Login failed:", message);
     return {
       success: false,
-      error: errorMessage,
+      error: message,
+      status: error.response?.status
+    };
+  }
+}
+
+// ==========================================================
+// B. Patient Endpoints (/api/patients)
+// ==========================================================
+
+/**
+ * Give or update patient consent
+ * POST /api/patients/consent
+ * @param {boolean} consent
+ */
+export async function giveConsent(consent = true) {
+  try {
+    const response = await apiClient.post("/patients/consent", { consent });
+    return {
+      success: true,
+      data: response.data?.data || response.data,
+      message: response.data?.message
+    };
+  } catch (error) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Consent update error:", message);
+    return {
+      success: false,
+      error: message,
       status: error.response?.status
     };
   }
 }
 
 /**
- * Protected route: Submit daily check-in measurements.
- * Request interceptor automatically attaches the Authorization Bearer token header.
- * @param {object} measurementData
- * @returns {Promise<{ success: boolean, message?: string, analysis?: object, error?: string }>}
+ * Get patient dashboard profile and baseline tracking stats
+ * GET /api/patients/profile
  */
-export async function submitDailyCheckIn(measurementData) {
+export async function getPatientProfile() {
   try {
-    const token = getToken();
-    if (!token) {
-      console.error("No token found. Please log in.");
-      return {
-        success: false,
-        error: "No authentication token found. Please log in."
-      };
-    }
+    const response = await apiClient.get("/patients/profile");
+    return {
+      success: true,
+      data: response.data?.data || response.data
+    };
+  } catch (error) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Profile fetch error:", message);
+    return {
+      success: false,
+      error: message,
+      status: error.response?.status
+    };
+  }
+}
 
-    // Interceptor automatically attaches headers: { Authorization: `Bearer ${token}` }
-    const response = await apiClient.post("/measurements", {
-      measurements: measurementData
-    });
+// ==========================================================
+// C. Daily Measurements & ML (/api/measurements)
+// ==========================================================
 
-    console.log("Success:", response.data?.message);
-    console.log("ML Result:", response.data?.analysis);
+/**
+ * Log daily symptoms and trigger Python ML server analysis
+ * POST /api/measurements
+ * Returns newly saved measurement with `riskScore` and `mlFlag`
+ * @param {object} symptomData - Symptom or measurement payload
+ */
+export async function logDailySymptoms(symptomData) {
+  try {
+    const response = await apiClient.post("/measurements", symptomData);
+    const resultData = response.data?.data || response.data;
 
     return {
       success: true,
-      message: response.data?.message,
-      analysis: response.data?.analysis,
-      data: response.data
+      data: resultData,
+      riskScore: resultData?.riskScore,
+      mlFlag: resultData?.mlFlag,
+      message: response.data?.message
     };
   } catch (error) {
-    const errorMessage = error.response?.data?.message || error.message || "Failed to submit measurements";
-    console.error("Error submitting data:", errorMessage);
+    const message = error.response?.data?.message || error.message;
+    console.error("Daily symptom logging error:", message);
     return {
       success: false,
-      error: errorMessage,
+      error: message,
       status: error.response?.status
     };
   }
 }
 
+// Alias for existing check-in flow compatibility
+export const submitDailyCheckIn = logDailySymptoms;
+
 /**
- * Protected route: Fetch patients for clinician view
- * @returns {Promise<{ success: boolean, data?: any, error?: string }>}
+ * View history of all past measurements for logged-in patient
+ * GET /api/measurements
+ */
+export async function getMeasurementHistory() {
+  try {
+    const response = await apiClient.get("/measurements");
+    return {
+      success: true,
+      data: response.data?.data || response.data
+    };
+  } catch (error) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Measurement history error:", message);
+    return {
+      success: false,
+      error: message,
+      status: error.response?.status
+    };
+  }
+}
+
+// ==========================================================
+// D. Doctor Endpoints (/api/doctor)
+// ==========================================================
+
+/**
+ * View patients assigned to this doctor
+ * GET /api/doctor/patients
  */
 export async function getDoctorPatients() {
   try {
     const response = await apiClient.get("/doctor/patients");
     return {
       success: true,
-      data: response.data
+      data: response.data?.data || response.data
     };
   } catch (error) {
-    const errorMessage = error.response?.data?.message || error.message;
-    console.error("Error fetching doctor patients:", errorMessage);
+    const message = error.response?.data?.message || error.message;
+    console.error("Doctor patients fetch error:", message);
     return {
       success: false,
-      error: errorMessage,
+      error: message,
+      status: error.response?.status
+    };
+  }
+}
+
+/**
+ * View full measurement history for a specific patient
+ * GET /api/doctor/patients/:patientId/trends
+ * @param {string|number} patientId
+ */
+export async function getPatientTrends(patientId) {
+  try {
+    const response = await apiClient.get(`/doctor/patients/${patientId}/trends`);
+    return {
+      success: true,
+      data: response.data?.data || response.data
+    };
+  } catch (error) {
+    const message = error.response?.data?.message || error.message;
+    console.error("Patient trends fetch error:", message);
+    return {
+      success: false,
+      error: message,
       status: error.response?.status
     };
   }
