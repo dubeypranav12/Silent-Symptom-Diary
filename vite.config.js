@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// base "./" lets the built site work from any folder or static host.
-export default defineConfig({ plugins: [react()], base: "./" });
+// base "/" ensures assets load correctly from root for BrowserRouter deep routes
+export default defineConfig({ plugins: [react()], base: "/" });
