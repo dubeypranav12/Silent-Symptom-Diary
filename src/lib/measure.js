@@ -53,10 +53,12 @@ export const PHRASE = "the quick brown fox";
 
 export function typingFeatures(presses) {
   const gaps = presses.slice(1).map((p, i) => p.down - presses[i].down);
+  const pressure = presses.map((p) => p.pressure).filter((p) => Number.isFinite(p) && p > 0);
   return {
     gapMs: mean(gaps),
     holdMs: mean(presses.map((p) => p.up - p.down)),
-    errors: presses.filter((p) => !p.ok).length
+    errors: presses.filter((p) => !p.ok).length,
+    pressure: pressure.length ? mean(pressure) : null
   };
 }
 

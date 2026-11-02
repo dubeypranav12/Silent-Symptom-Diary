@@ -55,23 +55,29 @@ export default function CheckIn() {
   }
 
   /* 2. Typing: our own on-screen pad records press and release times. */
-  function keyDown(ch) {
+  function keyDown(ch, pressure = null) {
     const t = typing.current;
     if (t.done || stepRef.current !== 1 || t.down[ch] !== undefined) return;
-    t.down[ch] = performance.now();
+    t.down[ch] = {
+      at: performance.now(),
+      pressure: Number.isFinite(pressure) && pressure > 0 ? pressure : null
+    };
   }
   function keyUp(ch) {
     const t = typing.current;
     if (t.done || stepRef.current !== 1 || t.down[ch] === undefined) return;
     const down = t.down[ch], up = performance.now();
     delete t.down[ch];
-    t.presses.push({ down, up, ok: ch === PHRASE[t.typed.length] });
+    t.presses.push({ down: down.at, up, ok: ch === PHRASE[t.typed.length], pressure: down.pressure });
     t.typed += ch;
     setTyped(t.typed);
     if (t.typed.length >= PHRASE.length) {
       t.done = true;
       const f = typingFeatures(t.presses);
-      finish("typing", "typing", round(f.gapMs, 1), "pad", { holdMs: round(f.holdMs, 1), typingErrors: f.errors });
+      finish("typing", "typing", round(f.gapMs, 1), "pad", {
+        holdMs: round(f.holdMs, 1), typingErrors: f.errors,
+        keyPressure: f.pressure === null ? null : round(f.pressure, 2)
+      });
     }
   }
   useEffect(() => {                              // a physical keyboard works too
@@ -129,7 +135,7 @@ export default function CheckIn() {
                 <div className="pad-row" key={row}>
                   {row.split("").map((ch) => (
                     <button key={ch} type="button" className={"key" + (ch === " " ? " space" : "")} aria-label={ch === " " ? "space" : ch}
-                      onPointerDown={(e) => { e.preventDefault(); keyDown(ch); }} onPointerUp={() => keyUp(ch)} onPointerCancel={() => keyUp(ch)} onPointerLeave={() => keyUp(ch)}>
+                      onPointerDown={(e) => { e.preventDefault(); keyDown(ch, e.pointerType === "touch" || e.pointerType === "pen" ? e.pressure : null); }} onPointerUp={() => keyUp(ch)} onPointerCancel={() => keyUp(ch)} onPointerLeave={() => keyUp(ch)}>
                       {ch === " " ? "space" : ch}
                     </button>
                   ))}

@@ -73,9 +73,9 @@ export default function Landing() {
             <h2>Three signals, one daily habit</h2>
             <p className="muted">Each reading takes seconds and uses sensors already in the phone.</p>
             <div className="grid3">
-              <article className="signal-card"><div className="art"><VoiceArt /></div><h3>Voice</h3><p className="muted small">A short “aaah” sample. Pauses and steadiness show speech changes.</p></article>
-              <article className="signal-card"><div className="art"><TypingArt /></div><h3>Typing</h3><p className="muted small">Timing between key presses shows fatigue and brain fog.</p></article>
-              <article className="signal-card"><div className="art"><MotionArt /></div><h3>Phone motion</h3><p className="muted small">Motion sensors while the phone is held steady show tremor.</p></article>
+              <article className="signal-card"><div className="art"><VoiceArt /></div><h3>Voice</h3><p className="muted small">A 5-second “aaah” sample is checked for quiet pauses, with speech indicators shown on your result card.</p></article>
+              <article className="signal-card"><div className="art"><TypingArt /></div><h3>Typing</h3><p className="muted small">We compare the timing between key presses. Key holds and typing errors are recorded as context.</p></article>
+              <article className="signal-card"><div className="art"><MotionArt /></div><h3>Phone tremor</h3><p className="muted small">Phone movement is checked for shaking energy in the 3–12 Hz range.</p></article>
             </div>
           </section>
 

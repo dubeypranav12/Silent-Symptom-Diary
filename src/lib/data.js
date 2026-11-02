@@ -7,9 +7,9 @@ const STRESS_LEVELS = ["low", "medium", "high"];
 
 /* The three signals. For all three, a higher value means more change. */
 export const METRICS = {
-  tremor: { label: "Tremor", from: "Phone motion", color: "#5B61EC", tint: "#E6E9FF" },
-  speech: { label: "Speech pauses", from: "Voice", color: "#1FB5CC", tint: "#D9F5FA" },
-  typing: { label: "Typing rhythm", from: "Typing", color: "#FF9F43", tint: "#FFEBD6" }
+  tremor: { label: "Tremor", from: "Phone tremor", color: "#5B61EC", tint: "#E6E9FF" },
+  speech: { label: "Speech", from: "Voice", color: "#1FB5CC", tint: "#D9F5FA" },
+  typing: { label: "Typing", from: "Typing", color: "#FF9F43", tint: "#FFEBD6" }
 };
 export const METRIC_KEYS = Object.keys(METRICS);
 
