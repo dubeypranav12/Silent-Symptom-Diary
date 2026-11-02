@@ -7,7 +7,7 @@ import axios from "axios";
  * and centralized 401/403 error handling via response interceptors.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://silent-symptom-diary.onrender.com/";
 const TOKEN_KEY = "token";
 const ROLE_KEY = "userRole";
 
