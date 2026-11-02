@@ -3,6 +3,7 @@ import { FiHome, FiMic, FiActivity, FiSettings, FiLogOut, FiGrid, FiGlobe, FiBel
 import { LuBrain } from "react-icons/lu";
 import { Ring } from "./Charts.jsx";
 import { EmptyArt } from "./Illustrations.jsx";
+import { logoutUser } from "../lib/api.js";
 
 const PATIENT_NAV = [
   { to: "/home", icon: FiHome, label: "Home" },
@@ -30,7 +31,7 @@ export function Shell({ role = "patient", right, children }) {
             <Icon />
           </NavLink>
         ))}
-        <Link to="/" className="sb-link sb-end" aria-label="Back to website" title="Back to website"><FiLogOut /></Link>
+        <Link to="/" onClick={() => logoutUser()} className="sb-link sb-end" aria-label="Sign out" title="Sign out"><FiLogOut /></Link>
       </nav>
       <div className={"layout" + (right ? "" : " no-right")}>
         <main className="main">

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiDownload, FiRefreshCw, FiTrash2, FiLogOut } from "react-icons/fi";
+import { FiDownload, FiRefreshCw, FiTrash2, FiLogOut, FiShield } from "react-icons/fi";
 import { Shell, PageHead } from "../components/Shell.jsx";
 import { STORE, clearAll, dateKey, getCheckins, getContextEntries, getNotes, makeSample, read, write } from "../lib/data.js";
+import { logoutUser } from "../lib/api.js";
 
 export default function Settings() {
   const nav = useNavigate();
@@ -31,6 +32,11 @@ export default function Settings() {
   function withdraw() {
     if (!window.confirm("Withdraw consent? Your data will also be deleted.")) return;
     clearAll();
+    logoutUser();
+    nav("/");
+  }
+  function handleSignOut() {
+    logoutUser();
     nav("/");
   }
 
@@ -57,9 +63,15 @@ export default function Settings() {
           <button type="button" className="btn danger" onClick={deleteData}>Delete data</button>
         </section>
         <section className="action">
-          <span className="stat-ic" style={{ background: "#FF9F43", marginBottom: 0 }}><FiLogOut /></span>
+          <span className="stat-ic" style={{ background: "#5B61EC", marginBottom: 0 }}><FiLogOut /></span>
+          <h2>Sign out</h2>
+          <p className="muted small">Logs you out from your account and clears your session.</p>
+          <button type="button" className="btn soft" onClick={handleSignOut}>Sign out</button>
+        </section>
+        <section className="action">
+          <span className="stat-ic" style={{ background: "#FF9F43", marginBottom: 0 }}><FiShield /></span>
           <h2>Withdraw consent</h2>
-          <p className="muted small">Deletes your data and returns you to the start.</p>
+          <p className="muted small">Deletes your data, clears your account, and returns to the start.</p>
           <button type="button" className="btn danger" onClick={withdraw}>Withdraw</button>
         </section>
       </div>

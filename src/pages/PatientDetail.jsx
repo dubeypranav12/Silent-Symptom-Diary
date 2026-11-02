@@ -1,16 +1,53 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FiAlertTriangle, FiCheckCircle, FiChevronLeft, FiPrinter, FiCheck } from "react-icons/fi";
 import { Shell, PageHead, StatCard, RightPanel, ChartCard, Empty } from "../components/Shell.jsx";
 import { Avatar } from "../components/Illustrations.jsx";
 import { MiniArea, TrendChart } from "../components/Charts.jsx";
 import { SIGNALS } from "../components/signals.jsx";
-import { BASELINE_DAYS, FLAG_NEEDED, FLAG_WINDOW, METRIC_KEYS, METRICS, allPatients, analyse, dayStatus, fmtChange, getNotes, prettyDate } from "../lib/data.js";
+import { BASELINE_DAYS, FLAG_NEEDED, FLAG_WINDOW, METRIC_KEYS, METRICS, allPatients, analyse, dateKey, dayStatus, fmtChange, getNotes, prettyDate } from "../lib/data.js";
+import { getPatientTrends, isAuthenticated } from "../lib/api.js";
 
 export default function PatientDetail() {
   const { id } = useParams();
-  const patient = useMemo(() => allPatients().find((p) => p.id === id), [id]);
+  const samplePatient = useMemo(() => allPatients().find((p) => p.id === id), [id]);
+  const [livePatient, setLivePatient] = useState(null);
   const [days, setDays] = useState(30);
+
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    let mounted = true;
+    async function loadTrends() {
+      try {
+        const res = await getPatientTrends(id);
+        if (mounted && res.success && res.data) {
+          const d = res.data;
+          const measurements = Array.isArray(d.history) ? d.history : Array.isArray(d) ? d : [];
+          if (measurements.length > 0) {
+            setLivePatient({
+              id: d.patientId || id,
+              name: d.name || (samplePatient ? samplePatient.name : "Patient"),
+              list: measurements.map((m) => ({
+                date: m.date || (m.createdAt ? m.createdAt.slice(0, 10) : dateKey()),
+                tremor: m.tremor,
+                speech: m.speech,
+                typing: m.typing,
+                source: m.source || { tremor: "sensor", speech: "mic", typing: "pad" },
+                details: m.details || {},
+                savedAt: m.savedAt || m.createdAt
+              }))
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch live patient trends:", err.message);
+      }
+    }
+    loadTrends();
+    return () => { mounted = false; };
+  }, [id, samplePatient]);
+
+  const patient = livePatient || samplePatient;
 
   if (!patient) {
     return (

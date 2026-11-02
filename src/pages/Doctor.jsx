@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiUsers, FiCheckCircle, FiAlertTriangle, FiTarget, FiArrowRight } from "react-icons/fi";
 import { Shell, PageHead, Banner, StatCard, AddCard, RightPanel, ChartCard, Empty } from "../components/Shell.jsx";
@@ -6,17 +6,60 @@ import { DoctorArt, DoctorAvatar, Avatar } from "../components/Illustrations.jsx
 import { MiniArea } from "../components/Charts.jsx";
 import { SIGNALS } from "../components/signals.jsx";
 import { BASELINE_DAYS, METRICS, METRIC_KEYS, Z_LIMIT, allPatients, analyse, dateKey, dayStatus, fmtChange, lastDays, prettyDate } from "../lib/data.js";
+import { getDoctorPatients, isAuthenticated } from "../lib/api.js";
 
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CELL_TEXT = { ok: "OK", warn: "High", learn: "New", none: "–" };
 
 export default function Doctor() {
-  const rows = useMemo(() => allPatients().map((p) => ({ ...p, a: analyse(p.list) })), []);
+  const [livePatients, setLivePatients] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    let mounted = true;
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await getDoctorPatients();
+        if (mounted && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const formatted = res.data.map((p) => ({
+            id: p._id || p.id,
+            name: p.name || p.email || "Patient",
+            email: p.email,
+            list: Array.isArray(p.measurements) && p.measurements.length > 0
+              ? p.measurements.map((m) => ({
+                  date: m.date || (m.createdAt ? m.createdAt.slice(0, 10) : dateKey()),
+                  tremor: m.tremor,
+                  speech: m.speech,
+                  typing: m.typing,
+                  source: m.source || { tremor: "sensor", speech: "mic", typing: "pad" },
+                  details: m.details || {},
+                  savedAt: m.savedAt || m.createdAt
+                }))
+              : []
+          }));
+          setLivePatients(formatted);
+        }
+      } catch (err) {
+        console.warn("Could not fetch live doctor patients:", err.message);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  const patientSource = livePatients && livePatients.length > 0 ? livePatients : allPatients();
+  const isLive = Boolean(livePatients && livePatients.length > 0);
+  const rows = useMemo(() => patientSource.map((p) => ({ ...p, a: analyse(p.list) })), [patientSource]);
+
   const today = dateKey();
   const flagged = rows.filter((r) => r.a.flagged.length);
   const learning = rows.filter((r) => !r.a.base.ready);
-  const checkedToday = rows.filter((r) => r.list[r.list.length - 1].date === today);
+  const checkedToday = rows.filter((r) => r.list.length > 0 && r.list[r.list.length - 1].date === today);
   const days = lastDays(7);
   const dateText = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
 
@@ -36,7 +79,7 @@ export default function Doctor() {
 
   return (
     <Shell role="doctor" right={
-      <RightPanel avatar={<DoctorAvatar size={96} />} name="Doctor" sub="Neurology clinic · demo view"
+      <RightPanel avatar={<DoctorAvatar size={96} />} name="Doctor" sub="Neurology clinic · clinician view"
         listTitle="Needs attention" items={items} chart={chart} />
     }>
       <PageHead title="Dashboard" date={dateText} />
@@ -44,19 +87,24 @@ export default function Doctor() {
       <Banner art={<DoctorArt />} title={<>Welcome, <b>Doctor</b></>}
         text={flagged.length ? `${flagged.length} of ${rows.length} patients show a sustained change.` : "No patient shows a sustained change today."}
         ring={{ value: rows.length - flagged.length, max: rows.length, label: "stable" }}>
-        <Link className="btn white" to={"/doctor/patient/" + (first ? first.id : rows[0].id)}>
+        <Link className="btn white" to={"/doctor/patient/" + (first ? first.id : rows[0]?.id || "p1")}>
           {first ? "Open flagged patient" : "Open first patient"} <FiArrowRight />
         </Link>
       </Banner>
 
       <section aria-labelledby="rep">
-        <div className="section-title"><h2 id="rep">Report</h2><span className="chip sample">Sample data and this device</span></div>
+        <div className="section-title">
+          <h2 id="rep">Report</h2>
+          <span className={`chip ${isLive ? "ok" : "sample"}`}>
+            {isLive ? `Live database (${rows.length} patients)` : "Sample demo preview"}
+          </span>
+        </div>
         <div className="stats">
           <StatCard icon={FiUsers} color="#5B61EC" label="Patients" value={rows.length} />
           <StatCard icon={FiCheckCircle} color="#1FB5CC" label="Checked in today" value={checkedToday.length} />
           <StatCard icon={FiAlertTriangle} color="#F4577B" label="Sustained change" value={flagged.length} />
           <StatCard icon={FiTarget} color="#FF9F43" label="Learning baseline" value={learning.length} />
-          <AddCard label="Invite patient" onClick={() => setNote("Inviting patients needs a backend. It is listed as future work.")} />
+          <AddCard label="Invite patient" onClick={() => setNote("Patient registration is live! Share your registration link with patients: /register/patient")} />
         </div>
         {note && <p className="muted small" role="status" style={{ marginTop: 10 }}>{note}</p>}
       </section>
