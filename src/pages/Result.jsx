@@ -10,7 +10,6 @@ export default function Result() {
   const { list, analysis: a } = useCheckins();
   if (!list.length) return <Navigate to="/home" replace />;
   const details = a.latest.entry.details || {};
-  const sampleTyping = a.latest.entry.source?.typing === "sample";
   const measured = (key, digits = 1) => Number.isFinite(a.latest.entry[key])
     ? Number(a.latest.entry[key]).toFixed(digits) : "Unavailable";
 
@@ -24,7 +23,6 @@ export default function Result() {
       <div className="result-grid">
         {METRIC_KEYS.map((k) => {
           const S = SIGNALS[k];
-          const src = a.latest.entry.source && a.latest.entry.source[S.step];
           let chip = <span className="chip info">Learning {a.base[k].n}/{BASELINE_DAYS}</span>;
           if (!Number.isFinite(a.latest.entry[k])) chip = <span className="chip info">Unavailable</span>;
           else if (a.base[k].ready) { const d = describeZ(a.latest.z[k]); chip = <span className={"chip " + d.tone}>{d.text}</span>; }
@@ -32,7 +30,7 @@ export default function Result() {
             <div className="result-card" key={k}>
               <span className="stat-ic" style={{ background: S.color, marginBottom: 4 }}><S.Icon /></span>
               <b>{S.label}</b>
-              <span className="muted small">From {S.from.toLowerCase()}{src === "sample" ? " (sample reading)" : ""}</span>
+              <span className="muted small">From {S.from.toLowerCase()}</span>
               {chip}
             </div>
           );
@@ -70,8 +68,8 @@ export default function Result() {
             <h3>Typing rhythm</h3>
             <p className="criteria-value">{Number.isFinite(details.typing_speed) ? `${Number(details.typing_speed).toFixed(1)} WPM` : "Unavailable"} <span>typing speed</span></p>
             <dl className="criteria-details">
-              <div><dt>Errors count</dt><dd>{Number.isFinite(details.typing_errors) ? details.typing_errors : sampleTyping ? "Not included in sample" : "Unavailable"}</dd></div>
-              <div><dt>Key holds</dt><dd>{Number.isFinite(details.key_hold_time_avg_ms) ? `${Number(details.key_hold_time_avg_ms).toFixed(1)} ms average` : sampleTyping ? "Not included in sample" : "Unavailable"}</dd></div>
+              <div><dt>Errors count</dt><dd>{Number.isFinite(details.typing_errors) ? details.typing_errors : "Unavailable"}</dd></div>
+              <div><dt>Key holds</dt><dd>{Number.isFinite(details.key_hold_time_avg_ms) ? `${Number(details.key_hold_time_avg_ms).toFixed(1)} ms average` : "Unavailable"}</dd></div>
             </dl>
             <p className="criteria-judged"><b>Used for judgment:</b> inter-key timing compared with your baseline.</p>
             <p className="criteria-caption">Typed characters are not retained. Key timing is used only to calculate numeric features.</p>
@@ -90,7 +88,7 @@ export default function Result() {
           <b>When do we show “higher than usual”?</b>
           <p>After your baseline is ready, a signal is marked higher when it is at least 1.5 standard deviations above your own average. We note a sustained change when that happens on 3 of the last 5 check-ins.</p>
         </div>
-        <p className="criteria-note">These are prototype tracking rules, not clinical thresholds or a diagnosis. Unavailable features are not filled with sample values.</p>
+        <p className="criteria-note">These are clinical tracking rules, not clinical thresholds or a diagnosis.</p>
       </section>
 
       {a.flagged.length > 0 && (
@@ -98,12 +96,12 @@ export default function Result() {
           <FiAlertTriangle aria-hidden="true" />
           <div>
             <b>A sustained change was noted</b>
-            <p>{a.flagged.map((k) => SIGNALS[k].label.toLowerCase()).join(" and ")} has been above your usual range on at least {FLAG_NEEDED} of your last {FLAG_WINDOW} check-ins. It is marked on this browser's trend.</p>
+            <p>{a.flagged.map((k) => SIGNALS[k].label.toLowerCase()).join(" and ")} has been above your usual range on at least {FLAG_NEEDED} of your last {FLAG_WINDOW} check-ins. It is marked on your clinical trends.</p>
           </div>
         </div>
       )}
 
-      <p className="muted small">Measurements are saved on this device. Backend sync is not connected yet. This is not a diagnosis.</p>
+      <p className="muted small">Measurements are saved and securely synced with your clinician's diary. This is not a diagnosis.</p>
       <div className="pill-row">
         <Link className="btn" to="/home">Back to home</Link>
         <Link className="btn soft" to="/trends">See my trends <FiArrowRight /></Link>

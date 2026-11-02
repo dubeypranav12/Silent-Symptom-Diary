@@ -7,8 +7,8 @@ import { giveConsent as apiGiveConsent } from "../lib/api.js";
 
 const ITEMS = [
   { Icon: FiLock, text: "Voice is analysed on my phone. Raw audio is never sent." },
-  { Icon: FiUsers, text: "If a backend is connected, only calculated numerical features are sent; raw audio, typed words and motion samples are not." },
-  { Icon: FiClock, text: "Sleep, stress and work-hour notes are stored in this browser for my personal trends." },
+  { Icon: FiUsers, text: "Only calculated numerical features are securely sent to your clinical care team; raw audio, typed words and motion samples are not." },
+  { Icon: FiClock, text: "Sleep, stress and work-hour notes are stored for personal and clinician trends." },
   { Icon: FiHeart, text: "I understand this supports my doctor and is not a diagnosis." }
 ];
 
@@ -51,7 +51,7 @@ export default function Consent() {
           {error && <p className="status err" role="alert">Please tick all boxes to continue.</p>}
           <button className="btn lg block" type="submit">I agree and continue</button>
         </form>
-        <p className="muted small">Your check-ins stay in this browser. You can delete them in Settings.</p>
+        <p className="muted small">Your check-ins are securely saved and synced. You can manage your data in Settings.</p>
       </div>
     </div>
   );

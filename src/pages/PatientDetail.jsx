@@ -5,49 +5,76 @@ import { Shell, PageHead, StatCard, RightPanel, ChartCard, Empty } from "../comp
 import { Avatar } from "../components/Illustrations.jsx";
 import { MiniArea, TrendChart } from "../components/Charts.jsx";
 import { SIGNALS } from "../components/signals.jsx";
-import { BASELINE_DAYS, FLAG_NEEDED, FLAG_WINDOW, METRIC_KEYS, METRICS, allPatients, analyse, dateKey, dayStatus, fmtChange, getNotes, prettyDate } from "../lib/data.js";
+import { BASELINE_DAYS, FLAG_NEEDED, FLAG_WINDOW, METRIC_KEYS, METRICS, analyse, dateKey, dayStatus, fmtChange, getNotes, prettyDate } from "../lib/data.js";
 import { getPatientTrends, isAuthenticated } from "../lib/api.js";
 
 export default function PatientDetail() {
   const { id } = useParams();
-  const samplePatient = useMemo(() => allPatients().find((p) => p.id === id), [id]);
   const [livePatient, setLivePatient] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
+  const authed = isAuthenticated();
 
   useEffect(() => {
-    if (!isAuthenticated()) return;
     let mounted = true;
+    if (!authed) {
+      setLoading(false);
+      return;
+    }
     async function loadTrends() {
       try {
+        setLoading(true);
         const res = await getPatientTrends(id);
         if (mounted && res.success && res.data) {
           const d = res.data;
           const measurements = Array.isArray(d.history) ? d.history : Array.isArray(d) ? d : [];
-          if (measurements.length > 0) {
-            setLivePatient({
-              id: d.patientId || id,
-              name: d.name || (samplePatient ? samplePatient.name : "Patient"),
-              list: measurements.map((m) => ({
-                date: m.date || (m.createdAt ? m.createdAt.slice(0, 10) : dateKey()),
-                tremor: m.tremor,
-                speech: m.speech,
-                typing: m.typing,
-                source: m.source || { tremor: "sensor", speech: "mic", typing: "pad" },
-                details: m.details || {},
-                savedAt: m.savedAt || m.createdAt
-              }))
-            });
-          }
+          setLivePatient({
+            id: d.patientId || id,
+            name: d.name || "Patient " + String(id).slice(-4),
+            list: measurements.map((m) => ({
+              date: m.date || (m.createdAt ? m.createdAt.slice(0, 10) : dateKey()),
+              tremor: m.tremor,
+              speech: m.speech,
+              typing: m.typing,
+              source: m.source || { tremor: "sensor", speech: "mic", typing: "pad" },
+              details: m.details || {},
+              savedAt: m.savedAt || m.createdAt
+            }))
+          });
         }
       } catch (err) {
         console.warn("Could not fetch live patient trends:", err.message);
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
     loadTrends();
     return () => { mounted = false; };
-  }, [id, samplePatient]);
+  }, [id, authed]);
 
-  const patient = livePatient || samplePatient;
+  const patient = livePatient;
+
+  if (!authed) {
+    return (
+      <Shell role="doctor">
+        <PageHead title="Authentication required"><Link className="btn soft" to="/doctor"><FiChevronLeft /> Back to patients</Link></PageHead>
+        <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+          <h2>Doctor Authentication Required</h2>
+          <p className="muted" style={{ margin: "12px 0 20px" }}>Please log in to view genuine clinical trends.</p>
+          <Link className="btn" to="/login/doctor">Sign in</Link>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Shell role="doctor">
+        <PageHead title="Loading patient record..."><Link className="btn soft" to="/doctor"><FiChevronLeft /> Back to patients</Link></PageHead>
+        <div className="card"><Empty text="Fetching patient trends from clinical database..." /></div>
+      </Shell>
+    );
+  }
 
   if (!patient) {
     return (
@@ -78,13 +105,13 @@ export default function PatientDetail() {
     const st = dayStatus(list, a, e.date);
     return {
       lead: <span className="lead-ic" style={{ background: st === "warn" ? "#F4577B" : st === "ok" ? "#22B98A" : "#5B61EC" }}>{st === "warn" ? <FiAlertTriangle /> : <FiCheck />}</span>,
-      title: prettyDate(e.date), sub: e.source === "sample" ? "Sample reading" : "Check-in",
+      title: prettyDate(e.date), sub: "Daily check-in",
       tag: <span className={"chip " + (st === "warn" ? "warn" : st === "ok" ? "ok" : "info")}>{st === "warn" ? "Above usual" : st === "ok" ? "In range" : "Learning"}</span>
     };
   });
 
   const notes = getNotes();
-  const noteLines = patient.sample ? [] : Object.keys(notes).sort().slice(-5).map((d) => {
+  const noteLines = Object.keys(notes).sort().slice(-5).map((d) => {
     const t = [notes[d].medicine && "took medicine", notes[d].sleep && "slept well"].filter(Boolean).join(", ");
     return t ? prettyDate(d) + ": " + t : "";
   }).filter(Boolean);
@@ -99,7 +126,7 @@ export default function PatientDetail() {
 
   return (
     <Shell role="doctor" right={
-      <RightPanel avatar={<Avatar seed={patient.id} size={96} />} name={name} sub={patient.sample ? "Sample patient" : "This device"}
+      <RightPanel avatar={<Avatar seed={patient.id} size={96} />} name={name} sub="Enrolled patient"
         listTitle="Recent check-ins" items={recent} chart={chart} />
     }>
       <PageHead title={`${name} · last ${n} check-ins`}>
@@ -142,7 +169,6 @@ export default function PatientDetail() {
       <section className="card">
         <h2 style={{ marginBottom: 6 }}>Patient notes</h2>
         <p className="muted small">{noteLines.length ? noteLines.join(" · ") : "Notes on medicine timing and sleep appear here when the patient adds them."}</p>
-        {patient.sample && <p className="muted small" style={{ marginTop: 8 }}><span className="chip sample">Sample data</span> Not a real patient.</p>}
       </section>
     </Shell>
   );

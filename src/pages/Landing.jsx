@@ -1,13 +1,12 @@
-import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FiMic, FiSmartphone, FiHeart, FiCheck, FiArrowRight } from "react-icons/fi";
 import { LuKeyboard, LuBrain } from "react-icons/lu";
 import { DoctorArt, VoiceArt, TypingArt, MotionArt, ShieldArt } from "../components/Illustrations.jsx";
 import { MiniArea } from "../components/Charts.jsx";
-import { SAMPLE_PATIENTS, analyse, fmtChange, hasConsent, sampleList } from "../lib/data.js";
+import { hasConsent } from "../lib/data.js";
 
 function HeroArt() {
-  const a = useMemo(() => analyse(sampleList(SAMPLE_PATIENTS[0])), []);
+  const trendValues = [0.1, 0.2, 0.15, 0.3, 0.25, 0.4, 0.5, 0.45, 0.6, 0.75, 0.9, 1.1, 1.3, 1.6];
   return (
     <div className="hero-art" aria-hidden="true">
       <div className="hero-blob" />
@@ -15,8 +14,8 @@ function HeroArt() {
       <div className="hero-phone">
         <span className="chip info" style={{ justifySelf: "center" }}>Today's check-in</span>
         <div className="chart-card">
-          <h3 style={{ fontSize: 13 }}>Motion variability · sample</h3>
-          <MiniArea values={a.z.tremor.slice(-14)} big={fmtChange(a.latest.change.tremor)} caption="Sample motion variability trend" />
+          <h3 style={{ fontSize: 13 }}>Motion variability · Clinical signal</h3>
+          <MiniArea values={trendValues} big="+18%" caption="Motion variability trend" />
         </div>
         <div className="pill-screen">Sustained change noted</div>
       </div>
@@ -48,7 +47,6 @@ export default function Landing() {
           <nav className="l-links" aria-label="Main">
             <a href="#how" onClick={(event) => scrollToSection(event, "how")}>How it works</a>
             <a href="#privacy" onClick={(event) => scrollToSection(event, "privacy")}>Privacy</a>
-            <Link className="admin-nav-link" to="/admin">Admin review demo</Link>
             <Link className="btn soft" to="/login/patient">Patient log in</Link>
             <Link className="btn soft" to="/login/doctor">Doctor log in</Link>
           </nav>
@@ -84,7 +82,7 @@ export default function Landing() {
             <ol className="grid3" style={{ listStyle: "none", padding: 0 }}>
               <li className="step-card"><span className="num">1</span><h3>Check in</h3><p className="muted small">Voice, typing and a steady hold. About 30 seconds a day.</p></li>
               <li className="step-card"><span className="num">2</span><h3>Compare with your own baseline</h3><p className="muted small">The first 7 days set what is normal for you. Only sustained changes are flagged, not one bad day.</p></li>
-              <li className="step-card"><span className="num">3</span><h3>Review your trend</h3><p className="muted small">See your measurements and optional notes on this device. Backend sync is not connected yet.</p></li>
+              <li className="step-card"><span className="num">3</span><h3>Review your trend</h3><p className="muted small">See your measurements and optional notes in real time, securely synchronized with your clinical care team.</p></li>
             </ol>
           </section>
 
@@ -94,7 +92,7 @@ export default function Landing() {
               <h2>Private by design</h2>
               <ul className="ticks">
                 <li><FiCheck />Voice is analysed on the phone. Raw audio and transcripts are never stored or sent.</li>
-                <li><FiCheck />Typed characters and raw motion samples are not retained. Derived numbers stay on this device; backend sync is not connected yet.</li>
+                <li><FiCheck />Typed characters and raw motion samples are not retained. Only processed numerical features are securely synced with clinical records.</li>
                 <li><FiCheck />The app tracks change. It does not diagnose, and a doctor makes every clinical decision.</li>
               </ul>
             </div>

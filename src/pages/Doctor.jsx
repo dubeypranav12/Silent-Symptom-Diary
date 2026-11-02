@@ -5,7 +5,7 @@ import { Shell, PageHead, Banner, StatCard, AddCard, RightPanel, ChartCard, Empt
 import { DoctorArt, DoctorAvatar, Avatar } from "../components/Illustrations.jsx";
 import { MiniArea } from "../components/Charts.jsx";
 import { SIGNALS } from "../components/signals.jsx";
-import { BASELINE_DAYS, METRICS, METRIC_KEYS, Z_LIMIT, allPatients, analyse, dateKey, dayStatus, fmtChange, lastDays, prettyDate } from "../lib/data.js";
+import { BASELINE_DAYS, METRICS, METRIC_KEYS, Z_LIMIT, analyse, dateKey, dayStatus, fmtChange, lastDays, prettyDate } from "../lib/data.js";
 import { getDoctorPatients, isAuthenticated } from "../lib/api.js";
 
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -13,55 +13,91 @@ const CELL_TEXT = { ok: "OK", warn: "High", learn: "New", none: "–" };
 
 export default function Doctor() {
   const [livePatients, setLivePatients] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
+  const authed = isAuthenticated();
 
   useEffect(() => {
-    if (!isAuthenticated()) return;
     let mounted = true;
+    if (!authed) {
+      setLoading(false);
+      return;
+    }
     async function load() {
       try {
         setLoading(true);
         const res = await getDoctorPatients();
-        if (mounted && res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const formatted = res.data.map((p) => ({
-            id: p._id || p.id,
-            name: p.name || p.email || "Patient",
-            email: p.email,
-            list: Array.isArray(p.measurements) && p.measurements.length > 0
-              ? p.measurements.map((m) => ({
-                  date: m.date || (m.createdAt ? m.createdAt.slice(0, 10) : dateKey()),
-                  tremor: m.tremor,
-                  speech: m.speech,
-                  typing: m.typing,
-                  source: m.source || { tremor: "sensor", speech: "mic", typing: "pad" },
-                  details: m.details || {},
-                  savedAt: m.savedAt || m.createdAt
-                }))
-              : []
-          }));
-          setLivePatients(formatted);
+        if (mounted) {
+          if (res.success && Array.isArray(res.data)) {
+            const formatted = res.data.map((p) => ({
+              id: p._id || p.id,
+              name: p.name || p.email || "Patient",
+              email: p.email,
+              list: Array.isArray(p.measurements)
+                ? p.measurements.map((m) => ({
+                    date: m.date || (m.createdAt ? m.createdAt.slice(0, 10) : dateKey()),
+                    tremor: m.tremor,
+                    speech: m.speech,
+                    typing: m.typing,
+                    source: m.source || { tremor: "sensor", speech: "mic", typing: "pad" },
+                    details: m.details || {},
+                    savedAt: m.savedAt || m.createdAt
+                  }))
+                : []
+            }));
+            setLivePatients(formatted);
+          } else {
+            setLivePatients([]);
+          }
         }
       } catch (err) {
         console.warn("Could not fetch live doctor patients:", err.message);
+        if (mounted) setLivePatients([]);
       } finally {
         if (mounted) setLoading(false);
       }
     }
     load();
     return () => { mounted = false; };
-  }, []);
+  }, [authed]);
 
-  const patientSource = livePatients && livePatients.length > 0 ? livePatients : allPatients();
-  const isLive = Boolean(livePatients && livePatients.length > 0);
-  const rows = useMemo(() => patientSource.map((p) => ({ ...p, a: analyse(p.list) })), [patientSource]);
+  const dateText = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
 
+  if (!authed) {
+    return (
+      <Shell role="doctor">
+        <PageHead title="Clinician Dashboard" date={dateText} />
+        <div className="card" style={{ textAlign: "center", padding: "48px 24px" }}>
+          <h2>Doctor Authentication Required</h2>
+          <p className="muted" style={{ maxWidth: 480, margin: "12px auto 24px" }}>
+            Please sign in with your doctor credentials to view enrolled patients and genuine clinical signal trends.
+          </p>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <Link className="btn lg" to="/login/doctor">Doctor sign in</Link>
+            <Link className="btn lg soft" to="/register/doctor">Register as a doctor</Link>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Shell role="doctor">
+        <PageHead title="Clinician Dashboard" date={dateText} />
+        <div className="card" style={{ textAlign: "center", padding: "48px 24px" }}>
+          <p className="muted">Connecting to clinical database...</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  const rows = (livePatients || []).map((p) => ({ ...p, a: analyse(p.list) }));
   const today = dateKey();
   const flagged = rows.filter((r) => r.a.flagged.length);
   const learning = rows.filter((r) => !r.a.base.ready);
   const checkedToday = rows.filter((r) => r.list.length > 0 && r.list[r.list.length - 1].date === today);
   const days = lastDays(7);
-  const dateText = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
 
   const first = flagged[0];
   const items = flagged.slice(0, 3).map((r) => ({
@@ -75,7 +111,7 @@ export default function Doctor() {
         <MiniArea values={first.a.z[first.a.flagged[0]].slice(-14)} big={fmtChange(first.a.latest.change[first.a.flagged[0]])} caption="Flagged signal compared with the patient's usual range" />
       </ChartCard>
     )
-    : <div className="panel"><Empty text="No sustained changes right now." /></div>;
+    : <div className="panel"><Empty text={rows.length ? "No sustained changes right now." : "Clinical signal charts will appear when patients complete check-ins."} /></div>;
 
   return (
     <Shell role="doctor" right={
@@ -85,18 +121,28 @@ export default function Doctor() {
       <PageHead title="Dashboard" date={dateText} />
 
       <Banner art={<DoctorArt />} title={<>Welcome, <b>Doctor</b></>}
-        text={flagged.length ? `${flagged.length} of ${rows.length} patients show a sustained change.` : "No patient shows a sustained change today."}
-        ring={{ value: rows.length - flagged.length, max: rows.length, label: "stable" }}>
-        <Link className="btn white" to={"/doctor/patient/" + (first ? first.id : rows[0]?.id || "p1")}>
-          {first ? "Open flagged patient" : "Open first patient"} <FiArrowRight />
-        </Link>
+        text={rows.length === 0
+          ? "Your clinic registry is ready. Share your registration link with patients to start tracking."
+          : flagged.length
+          ? `${flagged.length} of ${rows.length} patients show a sustained change.`
+          : "No patient shows a sustained change today."}
+        ring={{ value: rows.length ? rows.length - flagged.length : 0, max: Math.max(rows.length, 1), label: rows.length ? "stable" : "patients" }}>
+        {rows.length > 0 ? (
+          <Link className="btn white" to={"/doctor/patient/" + (first ? first.id : rows[0].id)}>
+            {first ? "Open flagged patient" : "Open first patient"} <FiArrowRight />
+          </Link>
+        ) : (
+          <Link className="btn white" to="/register/patient">
+            Enroll new patient <FiArrowRight />
+          </Link>
+        )}
       </Banner>
 
       <section aria-labelledby="rep">
         <div className="section-title">
           <h2 id="rep">Report</h2>
-          <span className={`chip ${isLive ? "ok" : "sample"}`}>
-            {isLive ? `Live database (${rows.length} patients)` : "Sample demo preview"}
+          <span className="chip ok">
+            {`Connected database (${rows.length} patients)`}
           </span>
         </div>
         <div className="stats">
@@ -118,16 +164,22 @@ export default function Doctor() {
             <span><i style={{ background: "#F0F2FF", border: "1px solid #DDE1FF" }} />No check-in</span>
           </div>
         </div>
-        <div className="scroll-x">
-          <div className="activity" role="table" aria-label="Last 7 days of check-ins per patient">
-            <span />
-            {days.map((d) => <span className="hd" key={d.toISOString()}>{DAY[d.getDay()]} {d.getDate()}</span>)}
-            {rows.map((r) => [
-              <div className="who" key={r.id}><Avatar seed={r.id} size={34} /><Link to={"/doctor/patient/" + r.id}>{r.name}</Link></div>,
-              ...days.map((d) => { const st = dayStatus(r.list, r.a, dateKey(d)); return <span key={r.id + d.getDate()} className={"cell " + st} title={`${r.name}, ${prettyDate(dateKey(d))}`}>{CELL_TEXT[st]}</span>; })
-            ])}
+        {rows.length === 0 ? (
+          <p className="muted" style={{ padding: "28px 16px", textAlign: "center" }}>
+            No patient check-in activity recorded yet. When registered patients complete daily check-ins, their 7-day timeline will appear here.
+          </p>
+        ) : (
+          <div className="scroll-x">
+            <div className="activity" role="table" aria-label="Last 7 days of check-ins per patient">
+              <span />
+              {days.map((d) => <span className="hd" key={d.toISOString()}>{DAY[d.getDay()]} {d.getDate()}</span>)}
+              {rows.map((r) => [
+                <div className="who" key={r.id}><Avatar seed={r.id} size={34} /><Link to={"/doctor/patient/" + r.id}>{r.name}</Link></div>,
+                ...days.map((d) => { const st = dayStatus(r.list, r.a, dateKey(d)); return <span key={r.id + d.getDate()} className={"cell " + st} title={`${r.name}, ${prettyDate(dateKey(d))}`}>{CELL_TEXT[st]}</span>; })
+              ])}
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       <section className="card" aria-labelledby="pts">
@@ -137,21 +189,29 @@ export default function Doctor() {
             <caption className="sr-only">Patients with change from their own baseline</caption>
             <thead><tr><th scope="col">Patient</th><th scope="col">Last check-in</th>{METRIC_KEYS.map((k) => <th scope="col" key={k}>{SIGNALS[k].label}</th>)}<th scope="col">Status</th></tr></thead>
             <tbody>
-              {rows.map((r) => {
-                const last = r.list[r.list.length - 1];
-                return (
-                  <tr key={r.id}>
-                    <td><Link className="who" to={"/doctor/patient/" + r.id}><Avatar seed={r.id} size={36} />{r.name}</Link></td>
-                    <td>{last.date === today ? "Today" : prettyDate(last.date)}</td>
-                    {METRIC_KEYS.map((k) => (
-                      <td key={k} className={r.a.base.ready && r.a.latest.z[k] >= Z_LIMIT ? "num-warn" : ""}>
-                        {r.a.base.ready ? fmtChange(r.a.latest.change[k]) : <span className="muted">Learning</span>}
-                      </td>
-                    ))}
-                    <td>{!r.a.base.ready ? <span className="chip info">Learning {r.a.base.n}/{BASELINE_DAYS}</span> : r.a.flagged.length ? <span className="chip warn">Flagged</span> : <span className="chip ok">Stable</span>}</td>
-                  </tr>
-                );
-              })}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "32px 16px" }} className="muted">
+                    No patients registered with your clinic yet. Share your registration link <b>/register/patient</b> with patients to enroll them.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => {
+                  const last = r.list[r.list.length - 1];
+                  return (
+                    <tr key={r.id}>
+                      <td><Link className="who" to={"/doctor/patient/" + r.id}><Avatar seed={r.id} size={36} />{r.name}</Link></td>
+                      <td>{last ? (last.date === today ? "Today" : prettyDate(last.date)) : "No entries"}</td>
+                      {METRIC_KEYS.map((k) => (
+                        <td key={k} className={r.a.base.ready && r.a.latest?.z[k] >= Z_LIMIT ? "num-warn" : ""}>
+                          {r.a.base.ready ? fmtChange(r.a.latest.change[k]) : <span className="muted">Learning</span>}
+                        </td>
+                      ))}
+                      <td>{!r.a.base.ready ? <span className="chip info">Learning {r.a.base.n}/{BASELINE_DAYS}</span> : r.a.flagged.length ? <span className="chip warn">Flagged</span> : <span className="chip ok">Stable</span>}</td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

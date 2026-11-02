@@ -5,11 +5,6 @@ import { LuBrain } from "react-icons/lu";
 import { hasConsent } from "../lib/data.js";
 import { loginUser, registerUser } from "../lib/api.js";
 
-const DEMO_ACCOUNTS = {
-  patient: { email: "patient.demo@silentdiary.app", password: "PatientDemo123" },
-  doctor: { email: "doctor.demo@silentdiary.app", password: "DoctorDemo123" }
-};
-
 export default function AuthPage({ mode }) {
   const { role } = useParams();
   const navigate = useNavigate();
@@ -59,13 +54,7 @@ export default function AuthPage({ mode }) {
           const userRole = res.user?.role || role;
           navigate(userRole === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
         } else {
-          // Fallback to local demo account if backend is asleep or demo credentials used
-          const demo = DEMO_ACCOUNTS[role];
-          if (email.trim().toLowerCase() === demo.email && password === demo.password) {
-            navigate(role === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
-            return;
-          }
-          setMessage(res.error || "Login failed. Please check your credentials.");
+          setMessage(res.error || "Invalid email or password. Please try again.");
         }
       }
     } catch (err) {
@@ -73,12 +62,6 @@ export default function AuthPage({ mode }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  function fillDemoCredentials() {
-    setEmail(DEMO_ACCOUNTS[role].email);
-    setPassword(DEMO_ACCOUNTS[role].password);
-    setMessage("Demo credentials filled. Select the sign-in button to continue.");
   }
 
   return (
@@ -122,14 +105,8 @@ export default function AuthPage({ mode }) {
               </button>
             </form>
 
-            {!isRegister && <section className="demo-login" aria-label={`${roleName} demo account`}>
-              <div><b>{roleName} demo account</b><span>Use these sample credentials to preview the {roleName.toLowerCase()} experience.</span></div>
-              <dl><dt>Email</dt><dd>{DEMO_ACCOUNTS[role].email}</dd><dt>Password</dt><dd>{DEMO_ACCOUNTS[role].password}</dd></dl>
-              <button type="button" className="link-btn" onClick={fillDemoCredentials}>Fill demo credentials</button>
-            </section>}
-
             <p className="auth-switch">{isRegister ? "Already registered?" : "New to Silent Symptom Diary?"} <Link to={destination}>{isRegister ? "Sign in" : "Create an account"}</Link></p>
-            <p className="auth-prototype" role="status" aria-live="polite">{message || (isRegister ? "Prototype preview: registration is not connected yet." : "Demo sign-in works locally; there is no real account service connected.")}</p>
+            {message && <p className="auth-prototype" role="status" aria-live="polite" style={{ color: "#E02424", background: "#FFE5E7" }}>{message}</p>}
           </section>
 
           <aside className="auth-aside">
@@ -144,7 +121,7 @@ export default function AuthPage({ mode }) {
             <p className="auth-aside-note">Supports clinical care. Does not diagnose or replace your clinician.</p>
           </aside>
         </main>
-        <footer className="auth-footer">Silent Symptom Diary · A prototype concept, not a medical device.</footer>
+        <footer className="auth-footer">Silent Symptom Diary · Secure Clinical Symptom Tracking.</footer>
       </div>
     </div>
   );

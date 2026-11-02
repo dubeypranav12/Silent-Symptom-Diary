@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiDownload, FiRefreshCw, FiTrash2, FiLogOut, FiShield } from "react-icons/fi";
+import { FiDownload, FiTrash2, FiLogOut, FiShield } from "react-icons/fi";
 import { Shell, PageHead } from "../components/Shell.jsx";
-import { STORE, clearAll, dateKey, getCheckins, getContextEntries, getNotes, makeSample, read, write } from "../lib/data.js";
+import { STORE, clearAll, dateKey, getCheckins, getContextEntries, getNotes, read, write } from "../lib/data.js";
 import { logoutUser } from "../lib/api.js";
 
 export default function Settings() {
@@ -18,11 +18,6 @@ export default function Settings() {
     a.click();
     URL.revokeObjectURL(a.href);
     setMsg("Download started.");
-  }
-  function loadSample() {
-    if (!window.confirm("Replace your check-ins with 30 days of sample history?")) return;
-    write(STORE.checkins, makeSample(99, 30, { tremor: { from: 20, slope: 0.03 } }));
-    setMsg("Sample history loaded. Open Trends or the doctor dashboard to see it.");
   }
   function deleteData() {
     if (!window.confirm("Delete all check-ins and notes from this browser?")) return;
@@ -47,14 +42,8 @@ export default function Settings() {
         <section className="action">
           <span className="stat-ic" style={{ background: "#1FB5CC", marginBottom: 0 }}><FiDownload /></span>
           <h2>Download my check-ins</h2>
-          <p className="muted small">Saves your data as a file. Everything is stored in this browser only.</p>
+          <p className="muted small">Saves your check-in and context data as a JSON file.</p>
           <button type="button" className="btn soft" onClick={download}>Download</button>
-        </section>
-        <section className="action">
-          <span className="stat-ic" style={{ background: "#5B61EC", marginBottom: 0 }}><FiRefreshCw /></span>
-          <h2>Load sample history</h2>
-          <p className="muted small">30 days of marked sample data for demos. It replaces your current check-ins.</p>
-          <button type="button" className="btn soft" onClick={loadSample}>Load sample</button>
         </section>
         <section className="action">
           <span className="stat-ic" style={{ background: "#F4577B", marginBottom: 0 }}><FiTrash2 /></span>

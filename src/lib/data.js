@@ -1,5 +1,4 @@
-/* Data layer: storage, baseline maths, flags and sample patients.
-   Everything lives in this browser's localStorage. Nothing is uploaded. */
+/* Data layer: storage, baseline maths, and clinical signal analysis. */
 
 export const STORE = { checkins: "ssd_checkins", notes: "ssd_notes", context: "ssd_context", consent: "ssd_consent" };
 export const CONTEXT_BASELINE_DAYS = 7;
@@ -172,42 +171,11 @@ export function dayStatus(list, a, key) {
   return METRIC_KEYS.some((k) => Number.isFinite(a.z[k][i]) && a.z[k][i] >= Z_LIMIT) ? "warn" : "ok";
 }
 
-/* ---------- sample patients (always labelled as sample in the UI) ---------- */
-function seeded(seed) {
-  return function () {
-    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-export function makeSample(seed, days, drift) {
-  const rand = seeded(seed), typical = { tremor: 12, speech: 22, typing: 320 }, out = [], today = new Date();
-  for (let i = 0; i < days; i++) {
-    const d = new Date(today); d.setDate(today.getDate() - (days - 1 - i));
-    const e = { date: dateKey(d), source: "sample" };
-    METRIC_KEYS.forEach((k) => {
-      let v = typical[k] * (1 + (rand() - 0.5) * 0.12);
-      const dr = drift && drift[k];
-      if (dr && i >= dr.from) v *= 1 + dr.slope * (i - dr.from + 1);
-      e[k] = Math.round(v * 100) / 100;
-    });
-    out.push(e);
-  }
-  return out;
-}
-export const SAMPLE_PATIENTS = [
-  { id: "014", name: "Patient 014", seed: 14, days: 30, drift: { tremor: { from: 24, slope: 0.05 } } },
-  { id: "021", name: "Patient 021", seed: 21, days: 30 },
-  { id: "027", name: "Patient 027", seed: 27, days: 30, drift: { speech: { from: 23, slope: 0.04 } } },
-  { id: "033", name: "Patient 033", seed: 33, days: 30 }
-];
-export const sampleList = (p) => makeSample(p.seed, p.days, p.drift);
-
-/* Everyone the doctor can see: sample patients plus this device (if it has check-ins). */
+/* Genuine patient records from this device (if check-ins exist). */
 export function allPatients() {
-  const rows = SAMPLE_PATIENTS.map((p) => ({ id: p.id, name: p.name, list: sampleList(p), sample: true }));
   const mine = getCheckins();
-  if (mine.length) rows.unshift({ id: "me", name: "You (this device)", list: mine, sample: false });
-  return rows;
+  if (mine.length) {
+    return [{ id: "me", name: "You (this device)", list: mine, sample: false }];
+  }
+  return [];
 }
