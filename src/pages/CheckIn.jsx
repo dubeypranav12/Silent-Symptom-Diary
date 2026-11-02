@@ -19,11 +19,19 @@ export default function CheckIn() {
   const [status, setStatus] = useState({ text: "", err: false });
   const [busy, setBusy] = useState(false);
   const [count, setCount] = useState(null);
-  const [typedCount, setTypedCount] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [wrongKey, setWrongKey] = useState(null);
+  const wrongKeyTimeout = useRef(null);
   const heading = useRef(null);
   const stepRef = useRef(0);                    // current step for event handlers
   const store = useRef({ result: {}, sources: {}, details: {} });
-  const typing = useRef({ count: 0, errors: 0, presses: [], downTimes: [], done: false });
+  const typing = useRef({ count: 0, errors: 0, presses: [], downTimes: [], typed: "", done: false });
+
+  useEffect(() => {
+    return () => {
+      if (wrongKeyTimeout.current) clearTimeout(wrongKeyTimeout.current);
+    };
+  }, []);
 
   useEffect(() => { stepRef.current = step; if (heading.current) heading.current.focus(); }, [step]);
 
@@ -47,6 +55,8 @@ export default function CheckIn() {
       typing.current.done = true;
       typing.current.presses.length = 0;
       typing.current.downTimes.length = 0;
+      typing.current.typed = "";
+      setTyped("");
     }
     finish(st.key, st.metric, null, "unavailable");
   };
@@ -77,15 +87,26 @@ export default function CheckIn() {
     const t = typing.current;
     if (t.done || stepRef.current !== 1 || !t.downTimes.length) return;
     const down = t.downTimes.shift(), up = performance.now();
-    if (ch !== PHRASE[t.count]) t.errors++;
-    t.presses.push({ down, up });
+    const isCorrect = ch === PHRASE[t.count];
+    if (!isCorrect) {
+      t.errors++;
+      setWrongKey(ch);
+      if (wrongKeyTimeout.current) clearTimeout(wrongKeyTimeout.current);
+      wrongKeyTimeout.current = setTimeout(() => setWrongKey(null), 350);
+      setStatus({ text: "Wrong key typed — error recorded", err: true });
+    } else {
+      setStatus({ text: "", err: false });
+    }
+    t.presses.push({ down, up, ok: isCorrect });
     t.count++;
-    setTypedCount(t.count);
+    t.typed += ch;
+    setTyped(t.typed);
     if (t.count >= PHRASE.length) {
       t.done = true;
       const f = typingFeatures(t.presses, PHRASE.trim().split(/\s+/).length);
       t.presses.length = 0;
       t.downTimes.length = 0;
+      t.typed = "";
       if (!f) {
         finish("typing", "typing", null, "unavailable");
         return;
@@ -143,16 +164,34 @@ export default function CheckIn() {
         {st.key === "typing" && (
           <>
             <p className="prompt" aria-label={"Phrase to type: " + PHRASE}>
-              {PHRASE.split("").map((c, i) => (
-                <span key={i} className={i < typedCount ? "done" : i === typedCount ? "next" : ""}>{c === " " ? "\u00a0" : c}</span>
-              ))}
+              {PHRASE.split("").map((c, i) => {
+                let statusClass = "";
+                if (i < typed.length) {
+                  statusClass = typed[i] === c ? "good" : "bad";
+                } else if (i === typed.length) {
+                  statusClass = "next";
+                }
+                return (
+                  <span key={i} className={statusClass}>
+                    {c === " " ? "\u00a0" : c}
+                  </span>
+                );
+              })}
             </p>
             <div className="pad">
               {["qwertyuiop", "asdfghjkl", "zxcvbnm", " "].map((row) => (
                 <div className="pad-row" key={row}>
                   {row.split("").map((ch) => (
-                    <button key={ch} type="button" className={"key" + (ch === " " ? " space" : "")} aria-label={ch === " " ? "space" : ch}
-                      onPointerDown={(e) => { e.preventDefault(); keyDown(); }} onPointerUp={() => keyUp(ch)} onPointerCancel={() => keyUp(ch)} onPointerLeave={() => keyUp(ch)}>
+                    <button
+                      key={ch}
+                      type="button"
+                      className={"key" + (ch === " " ? " space" : "") + (wrongKey === ch ? " key-err" : "")}
+                      aria-label={ch === " " ? "space" : ch}
+                      onPointerDown={(e) => { e.preventDefault(); keyDown(); }}
+                      onPointerUp={() => keyUp(ch)}
+                      onPointerCancel={() => keyUp(ch)}
+                      onPointerLeave={() => keyUp(ch)}
+                    >
                       {ch === " " ? "space" : ch}
                     </button>
                   ))}
