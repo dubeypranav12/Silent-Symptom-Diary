@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiLock, FiMail, FiUser } from "react-icons/fi";
 import { LuBrain } from "react-icons/lu";
 import { hasConsent } from "../lib/data.js";
+import { loginUser, registerUser } from "../lib/api.js";
 
 const DEMO_ACCOUNTS = {
   patient: { email: "patient.demo@silentdiary.app", password: "PatientDemo123" },
@@ -13,6 +14,7 @@ export default function AuthPage({ mode }) {
   const { role } = useParams();
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,25 +25,54 @@ export default function AuthPage({ mode }) {
   const otherRole = role === "doctor" ? "patient" : "doctor";
   const destination = `/${isRegister ? "login" : "register"}/${role}`;
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
+    setMessage("");
     const formData = new FormData(event.currentTarget);
+
     if (isRegister && formData.get("password") !== formData.get("confirmPassword")) {
       setMessage("Those passwords don’t match. Please check them and try again.");
       return;
     }
-    if (!isRegister) {
-      const demo = DEMO_ACCOUNTS[role];
-      if (email.trim().toLowerCase() !== demo.email || password !== demo.password) {
-        setMessage("Those details don’t match this demo account. Use the demo credentials shown below.");
-        return;
+
+    setLoading(true);
+
+    try {
+      if (isRegister) {
+        const name = formData.get("name") || email.split("@")[0];
+        const res = await registerUser({
+          name,
+          email: email.trim(),
+          password,
+          role
+        });
+
+        if (res.success) {
+          navigate(role === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
+        } else {
+          setMessage(res.error || "Registration failed. Please try again.");
+        }
+      } else {
+        const res = await loginUser(email.trim(), password);
+
+        if (res.success) {
+          const userRole = res.user?.role || role;
+          navigate(userRole === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
+        } else {
+          // Fallback to local demo account if backend is asleep or demo credentials used
+          const demo = DEMO_ACCOUNTS[role];
+          if (email.trim().toLowerCase() === demo.email && password === demo.password) {
+            navigate(role === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
+            return;
+          }
+          setMessage(res.error || "Login failed. Please check your credentials.");
+        }
       }
-      navigate(role === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
-      return;
+    } catch (err) {
+      setMessage("Connection error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setMessage(role === "doctor"
-      ? "Doctor registration is not active in this prototype. A real service must verify credentials and keep access pending until review. Your details were not submitted."
-      : "Registration is a design prototype. No account service is connected, and your details were not submitted.");
   }
 
   function fillDemoCredentials() {
@@ -86,7 +117,9 @@ export default function AuthPage({ mode }) {
                 <span className="input-wrap"><FiLock aria-hidden="true" /><input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="Enter it again" minLength={8} required /></span>
               </label>}
               <label className="show-password"><input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} /> Show password</label>
-              <button type="submit" className="btn lg block">{isRegister ? `Create ${roleName.toLowerCase()} account` : `Sign in as ${roleName.toLowerCase()}`}</button>
+              <button type="submit" className="btn lg block" disabled={loading}>
+                {loading ? "Connecting…" : isRegister ? `Create ${roleName.toLowerCase()} account` : `Sign in as ${roleName.toLowerCase()}`}
+              </button>
             </form>
 
             {!isRegister && <section className="demo-login" aria-label={`${roleName} demo account`}>

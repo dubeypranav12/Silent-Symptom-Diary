@@ -3,6 +3,7 @@ import { Navigate, useNavigate, Link } from "react-router-dom";
 import { FiLock, FiUsers, FiHeart, FiClock } from "react-icons/fi";
 import { ShieldArt } from "../components/Illustrations.jsx";
 import { giveConsent, hasConsent } from "../lib/data.js";
+import { giveConsent as apiGiveConsent } from "../lib/api.js";
 
 const ITEMS = [
   { Icon: FiLock, text: "Voice is analysed on my phone. Raw audio is never sent." },
@@ -13,15 +14,23 @@ const ITEMS = [
 
 export default function Consent() {
   const nav = useNavigate();
-  const [checked, setChecked] = useState([false, false, false]);
+  const [checked, setChecked] = useState(ITEMS.map(() => false));
   const [error, setError] = useState(false);
   if (hasConsent()) return <Navigate to="/home" replace />;
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     const ok = checked.every(Boolean);
     setError(!ok);
-    if (ok) { giveConsent(); nav("/home"); }
+    if (ok) {
+      giveConsent();
+      try {
+        await apiGiveConsent(true);
+      } catch (err) {
+        console.warn("Backend consent sync skipped:", err.message);
+      }
+      nav("/home");
+    }
   }
 
   return (
@@ -39,7 +48,7 @@ export default function Consent() {
               <span>{text}</span>
             </label>
           ))}
-          {error && <p className="status err" role="alert">Tick all three boxes to continue.</p>}
+          {error && <p className="status err" role="alert">Please tick all boxes to continue.</p>}
           <button className="btn lg block" type="submit">I agree and continue</button>
         </form>
         <p className="muted small">Your check-ins stay in this browser. You can delete them in Settings.</p>

@@ -5,6 +5,7 @@ import { LuKeyboard } from "react-icons/lu";
 import { Shell } from "../components/Shell.jsx";
 import { VoiceArt, TypingArt, MotionArt } from "../components/Illustrations.jsx";
 import { dateKey, saveCheckin } from "../lib/data.js";
+import { logDailySymptoms } from "../lib/api.js";
 import { PHRASE, VOICE_PROMPT, collectMotionVariability, recordSpeechFeatures, round, typingFeatures } from "../lib/measure.js";
 
 const STEPS = [
@@ -36,7 +37,7 @@ export default function CheckIn() {
   useEffect(() => { stepRef.current = step; if (heading.current) heading.current.focus(); }, [step]);
 
   /* Save one finished step. After the last step, store the check-in and show the result. */
-  function finish(key, metric, value, source, extra) {
+  async function finish(key, metric, value, source, extra) {
     const s = store.current;
     s.result[metric] = Number.isFinite(value) ? value : null;
     s.sources[key] = s.result[metric] === null ? "unavailable" : source;
@@ -44,7 +45,27 @@ export default function CheckIn() {
     setStatus({ text: "", err: false }); setBusy(false); setCount(null);
     if (stepRef.current < STEPS.length - 1) setStep(stepRef.current + 1);
     else {
-      saveCheckin({ date: dateKey(), tremor: s.result.tremor, speech: s.result.speech, typing: s.result.typing, source: s.sources, details: s.details, savedAt: new Date().toISOString() });
+      setBusy(true);
+      setStatus({ text: "Saving measurements & running ML analysis…", err: false });
+      const payload = {
+        date: dateKey(),
+        tremor: s.result.tremor,
+        speech: s.result.speech,
+        typing: s.result.typing,
+        source: s.sources,
+        details: s.details,
+        savedAt: new Date().toISOString()
+      };
+      try {
+        const apiRes = await logDailySymptoms(payload);
+        if (apiRes.success && apiRes.data) {
+          payload.riskScore = apiRes.riskScore;
+          payload.mlFlag = apiRes.mlFlag;
+        }
+      } catch (err) {
+        console.warn("Backend measurement sync skipped:", err.message);
+      }
+      saveCheckin(payload);
       nav("/result");
     }
   }
