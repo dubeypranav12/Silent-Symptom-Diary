@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiUsers, FiCheckCircle, FiAlertTriangle, FiTarget, FiArrowRight } from "react-icons/fi";
+import { FiUsers, FiCheckCircle, FiAlertTriangle, FiTarget, FiArrowRight, FiShield } from "react-icons/fi";
 import { Shell, PageHead, Banner, StatCard, AddCard, RightPanel, ChartCard, Empty } from "../components/Shell.jsx";
 import { DoctorArt, DoctorAvatar, Avatar } from "../components/Illustrations.jsx";
 import { MiniArea } from "../components/Charts.jsx";
@@ -118,7 +118,11 @@ export default function Doctor() {
       <RightPanel avatar={<DoctorAvatar size={96} />} name="Doctor" sub="Neurology clinic · clinician view"
         listTitle="Needs attention" items={items} chart={chart} />
     }>
-      <PageHead title="Dashboard" date={dateText} />
+      <PageHead title="Dashboard" date={dateText}>
+        <Link to="/admin" className="btn soft" style={{ minHeight: 38, padding: "0 14px", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <FiShield /> Admin Console
+        </Link>
+      </PageHead>
 
       <Banner art={<DoctorArt />} title={<>Welcome, <b>Doctor</b></>}
         text={rows.length === 0

@@ -47,6 +47,7 @@ export default function Landing() {
           <nav className="l-links" aria-label="Main">
             <a href="#how" onClick={(event) => scrollToSection(event, "how")}>How it works</a>
             <a href="#privacy" onClick={(event) => scrollToSection(event, "privacy")}>Privacy</a>
+            <Link className="admin-nav-link" to="/admin">Admin verification</Link>
             <Link className="btn soft" to="/login/patient">Patient log in</Link>
             <Link className="btn soft" to="/login/doctor">Doctor log in</Link>
           </nav>
@@ -61,7 +62,7 @@ export default function Landing() {
                 <Link className="btn lg" to={start}>Start daily check-in <FiArrowRight /></Link>
                 <Link className="btn lg soft" to="/doctor">View doctor dashboard</Link>
               </div>
-              <p className="auth-shortcuts">New here? <Link to="/register/patient">Create a patient account</Link> <span aria-hidden="true">·</span> <Link to="/register/doctor">Register as a doctor</Link></p>
+              <p className="auth-shortcuts">New here? <Link to="/register/patient">Create a patient account</Link> <span aria-hidden="true">·</span> <Link to="/register/doctor">Register as a doctor</Link> <span aria-hidden="true">·</span> <Link to="/admin">Admin portal</Link></p>
               <p className="muted small" style={{ marginTop: 18 }}>Supports clinicians. Never replaces them.</p>
             </div>
             <HeroArt />

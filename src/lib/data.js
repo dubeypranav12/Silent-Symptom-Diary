@@ -1,6 +1,12 @@
 /* Data layer: storage, baseline maths, and clinical signal analysis. */
 
-export const STORE = { checkins: "ssd_checkins", notes: "ssd_notes", context: "ssd_context", consent: "ssd_consent" };
+export const STORE = {
+  checkins: "ssd_checkins",
+  notes: "ssd_notes",
+  context: "ssd_context",
+  consent: "ssd_consent",
+  doctorApplications: "ssd_doctor_applications"
+};
 export const CONTEXT_BASELINE_DAYS = 7;
 const STRESS_LEVELS = ["low", "medium", "high"];
 
@@ -179,3 +185,55 @@ export function allPatients() {
   }
   return [];
 }
+
+/* ---------- Doctor registration and admin verification consent layer ---------- */
+export function getDoctorApplications() {
+  return read(STORE.doctorApplications, []).sort((a, b) => (b.submittedAt || "").localeCompare(a.submittedAt || ""));
+}
+
+export function recordDoctorRegistration(doctor) {
+  if (!doctor || !doctor.email) return null;
+  const all = read(STORE.doctorApplications, []);
+  const existingIndex = all.findIndex((d) => d.email.toLowerCase() === doctor.email.toLowerCase());
+  
+  const record = {
+    id: (existingIndex >= 0 && all[existingIndex].id) ? all[existingIndex].id : ("DOC-" + Math.random().toString(36).substring(2, 7).toUpperCase()),
+    name: doctor.name || (doctor.email.split("@")[0]),
+    email: doctor.email.trim(),
+    clinic: doctor.clinic || "Primary Healthcare Centre",
+    specialty: doctor.specialty || "Neurology & Movement Disorders",
+    registration: doctor.registration || ("MED-REG-" + Math.floor(10000 + Math.random() * 90000)),
+    jurisdiction: doctor.jurisdiction || "National Medical Registry",
+    consentReached: true,
+    consentAt: doctor.consentAt || new Date().toISOString(),
+    submittedAt: doctor.submittedAt || (existingIndex >= 0 ? all[existingIndex].submittedAt : new Date().toISOString()),
+    status: (existingIndex >= 0 && all[existingIndex].status) ? all[existingIndex].status : "pending"
+  };
+
+  if (existingIndex >= 0) {
+    all[existingIndex] = { ...all[existingIndex], ...record };
+  } else {
+    all.unshift(record);
+  }
+
+  write(STORE.doctorApplications, all);
+  try {
+    window.dispatchEvent(new CustomEvent("doctor:registered", { detail: record }));
+  } catch (e) {
+    // browser env safety
+  }
+  return record;
+}
+
+export function updateDoctorApplicationStatus(id, status) {
+  const all = read(STORE.doctorApplications, []);
+  const updated = all.map((app) => app.id === id ? { ...app, status, reviewedAt: new Date().toISOString() } : app);
+  write(STORE.doctorApplications, updated);
+  try {
+    window.dispatchEvent(new CustomEvent("doctor:statusChanged", { detail: { id, status } }));
+  } catch (e) {
+    // browser env safety
+  }
+  return updated;
+}
+
