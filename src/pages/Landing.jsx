@@ -72,7 +72,7 @@ export default function Landing() {
             <h2>Three signals, one daily habit</h2>
             <p className="muted">Each reading takes seconds and uses sensors already in the phone.</p>
             <div className="grid3">
-              <article className="signal-card"><div className="art"><VoiceArt /></div><h3>Voice</h3><p className="muted small">Read a fixed sentence aloud. Speech duration and pause count are calculated on this device; no transcript is created.</p></article>
+              <article className="signal-card"><div className="art"><VoiceArt /></div><h3>Voice</h3><p className="muted small">Read a fixed sentence aloud. Fundamental pitch (Hz), vocal tone modulation, pauses and fumbling cadence are analyzed directly on this device.</p></article>
               <article className="signal-card"><div className="art"><TypingArt /></div><h3>Typing</h3><p className="muted small">We compare the timing between key presses. Key holds and typing errors are recorded as context.</p></article>
               <article className="signal-card"><div className="art"><MotionArt /></div><h3>Phone motion</h3><p className="muted small">A motion variability feature is calculated on this device. It is not a tremor amplitude measurement.</p></article>
             </div>

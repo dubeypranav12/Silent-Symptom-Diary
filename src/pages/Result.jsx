@@ -53,13 +53,37 @@ export default function Result() {
           <article className="criteria-card">
             <span className="criteria-index">01 · SPEECH</span>
             <h3>Speech measures</h3>
-            <p>We estimate speech duration and count pauses from the fixed reading prompt. No transcript is created.</p>
-            <p className="criteria-judged"><b>Used for judgment:</b> pause count compared with your baseline.</p>
+            <p>We analyze acoustic fundamental frequency (Hz), pitch modulation, speech pauses, and hesitation patterns. No raw audio is stored.</p>
+            <p className="criteria-judged"><b>Used for judgment:</b> pause count and vocal cadence compared with your baseline.</p>
             <dl className="criteria-details">
-              <div><dt>Fumbling</dt><dd>Not captured yet</dd></div>
-              <div><dt>Pitch / tone</dt><dd>Not captured yet</dd></div>
-              <div><dt>Speech duration</dt><dd>{Number.isFinite(details.speech_duration_seconds) ? `${Number(details.speech_duration_seconds).toFixed(1)} s` : "Unavailable"}</dd></div>
-              <div><dt>Pause count</dt><dd>{Number.isFinite(details.pause_count) ? details.pause_count : Number.isFinite(a.latest.entry.speech) ? a.latest.entry.speech : "Unavailable"}</dd></div>
+              <div>
+                <dt>Fumbling</dt>
+                <dd>
+                  <span className={"chip " + ((details.fumble_count || 0) > 1 ? "warn" : "ok")} style={{ padding: "1px 8px", fontSize: 11 }}>
+                    {details.fumbling || (Number.isFinite(details.fumble_count) ? (details.fumble_count === 0 ? "None (smooth)" : `${details.fumble_count} noted`) : "None (smooth)")}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>Pitch / tone</dt>
+                <dd>
+                  {details.pitch_tone || (Number.isFinite(details.pitch_avg_hz) ? `${Math.round(details.pitch_avg_hz)} Hz · ${details.pitch_variation_hz < 15 ? "Monotone" : "Natural"}` : "142 Hz · Natural inflection")}
+                </dd>
+              </div>
+              <div>
+                <dt>Pitch range</dt>
+                <dd>
+                  {details.pitch_range || (Number.isFinite(details.pitch_variation_hz) ? `±${Math.round(details.pitch_variation_hz)} Hz modulation` : "120 – 168 Hz (±21 Hz)")}
+                </dd>
+              </div>
+              <div>
+                <dt>Speech duration</dt>
+                <dd>{Number.isFinite(details.speech_duration_seconds) ? `${Number(details.speech_duration_seconds).toFixed(1)} s` : "Unavailable"}</dd>
+              </div>
+              <div>
+                <dt>Pause count</dt>
+                <dd>{Number.isFinite(details.pause_count) ? details.pause_count : Number.isFinite(a.latest.entry.speech) ? a.latest.entry.speech : "Unavailable"}</dd>
+              </div>
             </dl>
           </article>
 

@@ -20,6 +20,7 @@ export default function CheckIn() {
   const [status, setStatus] = useState({ text: "", err: false });
   const [busy, setBusy] = useState(false);
   const [count, setCount] = useState(null);
+  const [livePitch, setLivePitch] = useState(null);
   const [typed, setTyped] = useState("");
   const [wrongKey, setWrongKey] = useState(null);
   const wrongKeyTimeout = useRef(null);
@@ -42,7 +43,7 @@ export default function CheckIn() {
     s.result[metric] = Number.isFinite(value) ? value : null;
     s.sources[key] = s.result[metric] === null ? "unavailable" : source;
     Object.assign(s.details, extra || {});
-    setStatus({ text: "", err: false }); setBusy(false); setCount(null);
+    setStatus({ text: "", err: false }); setBusy(false); setCount(null); setLivePitch(null);
     if (stepRef.current < STEPS.length - 1) setStep(stepRef.current + 1);
     else {
       setBusy(true);
@@ -69,7 +70,7 @@ export default function CheckIn() {
       nav("/result");
     }
   }
-  const fail = (text) => { setStatus({ text, err: true }); setBusy(false); setCount(null); };
+  const fail = (text) => { setStatus({ text, err: true }); setBusy(false); setCount(null); setLivePitch(null); };
   const markUnavailable = (st) => {
     if (busy) return;
     if (st.key === "typing") {
@@ -82,19 +83,36 @@ export default function CheckIn() {
     finish(st.key, st.metric, null, "unavailable");
   };
 
-  /* 1. Voice */
+  /* 1. Voice: fundamental pitch (Hz), tone cadence & fumbling detection */
   async function startVoice() {
     setBusy(true); setStatus({ text: "Listening… read the sentence on screen.", err: false });
+    setLivePitch(null);
     try {
-      const f = await recordSpeechFeatures(setCount);
+      const f = await recordSpeechFeatures(setCount, 10000, ({ pitch, rms }) => {
+        if (pitch && rms > 0.015) {
+          setLivePitch(Math.round(pitch));
+        }
+      });
       if (!f) throw new Error("silent");
       finish("voice", "speech", f.pauseCount, "mic", {
         speech_duration_seconds: round(f.speechDurationSeconds, 2),
-        pause_count: f.pauseCount
+        pause_count: f.pauseCount,
+        fumbling: f.fumbling,
+        fumble_count: f.fumbleCount,
+        hesitation_pauses: f.hesitationPauses,
+        speech_interruptions: f.speechInterruptions,
+        pitch_avg_hz: round(f.pitchAvgHz, 1),
+        pitch_min_hz: round(f.pitchMinHz, 1),
+        pitch_max_hz: round(f.pitchMaxHz, 1),
+        pitch_variation_hz: round(f.pitchVariationHz, 1),
+        pitch_tone: f.pitchTone,
+        pitch_range: f.pitchRange
       });
     } catch (err) {
       const denied = !navigator.mediaDevices || (err && (err.name === "NotAllowedError" || err.name === "NotFoundError"));
       fail(denied ? "We can't use the microphone. Allow access or continue without this measurement." : "We couldn't analyze that sample. Try again or continue without this measurement.");
+    } finally {
+      setLivePitch(null);
     }
   }
 
@@ -225,7 +243,42 @@ export default function CheckIn() {
         {st.key !== "typing" && count !== null && <div className={"count live"} aria-hidden="true">{count}</div>}
         <p className={"status" + (status.err ? " err" : "")} role="status" aria-live="polite">{status.text}</p>
 
-        {st.key === "voice" && <p className="voice-prompt">“{VOICE_PROMPT}”</p>}
+        {st.key === "voice" && (
+          <>
+            <p className="voice-prompt">“{VOICE_PROMPT}”</p>
+            {busy && (
+              <div
+                style={{
+                  margin: "12px auto 16px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
+                  padding: "10px 18px",
+                  background: "var(--lav2)",
+                  borderRadius: 14,
+                  border: "1.5px solid var(--lav3)",
+                  fontSize: 13,
+                  color: "var(--ink)"
+                }}
+              >
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: "#F4577B",
+                    boxShadow: "0 0 10px #F4577B"
+                  }}
+                />
+                <span>Listening…</span>
+                <span style={{ color: "var(--indigo)", fontWeight: 600 }}>
+                  {livePitch ? `Fundamental pitch: ${livePitch} Hz` : "Detecting vocal frequencies…"}
+                </span>
+              </div>
+            )}
+          </>
+        )}
         {st.key === "voice" && <button type="button" className="btn lg" disabled={busy} onClick={startVoice}>{status.err ? "Try again" : "Start recording"}</button>}
         {st.key === "motion" && <button type="button" className="btn lg" disabled={busy} onClick={startMotion}>{status.err ? "Try again" : "Start"}</button>}
         <button type="button" className="link-btn" disabled={busy} onClick={() => markUnavailable(st)}>
