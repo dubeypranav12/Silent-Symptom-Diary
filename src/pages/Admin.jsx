@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FiCheck, FiClock, FiShield, FiX, FiSearch, FiUserPlus, FiUserCheck, FiFileText } from "react-icons/fi";
 import { Shell, PageHead, StatCard, Empty } from "../components/Shell.jsx";
 import { getDoctorApplications, updateDoctorApplicationStatus } from "../lib/data.js";
@@ -7,6 +7,7 @@ import { getDoctorApplications, updateDoctorApplicationStatus } from "../lib/dat
 const FILTERS = ["all", "pending", "approved", "rejected"];
 
 export default function Admin() {
+  const navigate = useNavigate();
   const [applications, setApplications] = useState(() => getDoctorApplications());
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -54,11 +55,18 @@ export default function Admin() {
     });
   }, [applications, filter, search]);
 
-  function review(id, status) {
+  function review(id, status, application) {
     updateDoctorApplicationStatus(id, status);
     setApplications(getDoctorApplications());
-    const label = status === "approved" ? "verified and approved" : status === "rejected" ? "rejected" : "moved to pending";
-    setMessage(`Application ${id} ${label}. Doctor record updated.`);
+
+    if (status === "approved" && application?.email) {
+      navigate(`/login/doctor?notice=approved&email=${encodeURIComponent(application.email)}`);
+    } else if (status === "rejected" && application?.email) {
+      navigate(`/login/doctor?notice=rejected&email=${encodeURIComponent(application.email)}`);
+    } else {
+      const label = status === "approved" ? "verified and approved" : status === "rejected" ? "rejected" : "moved to pending";
+      setMessage(`Application ${id} ${label}. Doctor record updated.`);
+    }
   }
 
   const dateText = new Date().toLocaleDateString("en-IN", {
@@ -217,30 +225,30 @@ export default function Admin() {
                   <div className="admin-actions">
                     {st === "pending" && (
                       <>
-                        <button type="button" className="btn" onClick={() => review(application.id, "approved")}>
+                        <button type="button" className="btn" onClick={() => review(application.id, "approved", application)}>
                           <FiCheck /> Verify & Approve Doctor
                         </button>
-                        <button type="button" className="btn danger" onClick={() => review(application.id, "rejected")}>
+                        <button type="button" className="btn danger" onClick={() => review(application.id, "rejected", application)}>
                           <FiX /> Reject Application
                         </button>
                       </>
                     )}
                     {st === "approved" && (
                       <>
-                        <button type="button" className="btn soft" onClick={() => review(application.id, "pending")}>
+                        <button type="button" className="btn soft" onClick={() => review(application.id, "pending", application)}>
                           <FiClock /> Revert to Pending
                         </button>
-                        <button type="button" className="btn danger" onClick={() => review(application.id, "rejected")}>
+                        <button type="button" className="btn danger" onClick={() => review(application.id, "rejected", application)}>
                           <FiX /> Revoke Verification
                         </button>
                       </>
                     )}
                     {st === "rejected" && (
                       <>
-                        <button type="button" className="btn" onClick={() => review(application.id, "approved")}>
+                        <button type="button" className="btn" onClick={() => review(application.id, "approved", application)}>
                           <FiCheck /> Re-evaluate & Approve
                         </button>
-                        <button type="button" className="btn soft" onClick={() => review(application.id, "pending")}>
+                        <button type="button" className="btn soft" onClick={() => review(application.id, "pending", application)}>
                           <FiClock /> Move to Pending
                         </button>
                       </>

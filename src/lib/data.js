@@ -237,3 +237,11 @@ export function updateDoctorApplicationStatus(id, status) {
   return updated;
 }
 
+export function getDoctorApplicationByEmail(email) {
+  if (!email) return null;
+  const all = getDoctorApplications();
+  const normalized = email.trim().toLowerCase();
+  return all.find((d) => d.email && d.email.trim().toLowerCase() === normalized) || null;
+}
+
+
