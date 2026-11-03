@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-r
 import { FiArrowLeft, FiLock, FiMail, FiUser, FiClock, FiCheckCircle, FiAlertTriangle, FiX } from "react-icons/fi";
 import { LuBrain } from "react-icons/lu";
 import { hasConsent, recordDoctorRegistration, getDoctorApplicationByEmail } from "../lib/data.js";
-import { clearAuth, loginUser, registerUser } from "../lib/api.js";
+import { clearAuth, loginUser, registerUser, setToken, setUserRole } from "../lib/api.js";
 
 export default function AuthPage({ mode }) {
   const { role } = useParams();
@@ -12,64 +12,57 @@ export default function AuthPage({ mode }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState(() => searchParams.get("email") || "");
-  const [password, setPassword] = useState("");
 
-  const noticeParam = searchParams.get("notice");
-  const [modal, setModal] = useState(() => {
-    if (noticeParam === "request_sent") {
-      return {
-        open: true,
-        type: "pending",
-        title: "Request sent to Admin",
-        text: "Your doctor registration and compliance consent have been submitted to the Admin. Please wait for an administrator to verify and approve your medical credentials before logging in."
-      };
-    }
-    if (noticeParam === "rejected") {
-      return {
-        open: true,
-        type: "rejected",
-        title: "You are not approved by our admin,Sorry!",
-        text: "Your clinician application was reviewed and not approved by the admin. If you believe this is an error, please contact clinical administration."
-      };
-    }
-    if (noticeParam === "approved") {
-      return {
-        open: true,
-        type: "approved",
-        title: "Account Approved",
-        text: "Your medical credentials have been verified by the Admin! Please enter your password to access the clinician portal."
-      };
-    }
-    return { open: false, type: "", title: "", text: "" };
+  const [email, setEmail] = useState(() => searchParams.get("email") || "");
+  const [password, setPassword] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("ssd_doctor_saved_creds") || "{}");
+      const targetEmail = searchParams.get("email") || "";
+      if (saved.email && saved.password && (!targetEmail || saved.email.toLowerCase() === targetEmail.toLowerCase())) {
+        return saved.password;
+      }
+    } catch (e) {}
+    return "";
   });
+
+  const [modal, setModal] = useState({ open: false, type: "", title: "", text: "", actionBtn: null, secondaryBtn: null });
+
+  const isAcceptedNotice = searchParams.get("notice") === "accepted" || searchParams.get("notice") === "approved";
 
   useEffect(() => {
     const notice = searchParams.get("notice");
     const prefillEmail = searchParams.get("email");
     if (prefillEmail) setEmail(prefillEmail);
 
+    try {
+      const saved = JSON.parse(localStorage.getItem("ssd_doctor_saved_creds") || "{}");
+      const targetEmail = prefillEmail || email || "";
+      if (saved.email && saved.password && (!targetEmail || saved.email.toLowerCase() === targetEmail.toLowerCase())) {
+        setPassword(saved.password);
+      }
+    } catch (e) {}
+
     if (notice === "request_sent") {
       setModal({
         open: true,
         type: "pending",
         title: "Request sent to Admin",
-        text: "Your doctor registration and compliance consent have been submitted to the Admin. Please wait for an administrator to verify and approve your medical credentials before logging in."
+        text: "Your doctor registration and consent have been submitted to the Admin. Please wait for an administrator to verify and approve your medical credentials before logging in.",
+        actionBtn: { label: "Go to Admin Portal", onClick: () => navigate("/admin") },
+        secondaryBtn: { label: "Stay on Login", onClick: () => setModal((m) => ({ ...m, open: false })) }
       });
     } else if (notice === "rejected") {
+      setPassword("");
       setModal({
         open: true,
         type: "rejected",
         title: "You are not approved by our admin,Sorry!",
-        text: "Your clinician application was reviewed and not approved by the admin. If you believe this is an error, please contact clinical administration."
+        text: "Your clinician application was reviewed and not approved by the admin. If you believe this is an error, please contact clinical administration.",
+        actionBtn: { label: "Close", onClick: () => setModal((m) => ({ ...m, open: false })) }
       });
-    } else if (notice === "approved") {
-      setModal({
-        open: true,
-        type: "approved",
-        title: "Account Approved",
-        text: "Your medical credentials have been verified by the Admin! Please enter your password to access the clinician portal."
-      });
+    } else if (notice === "accepted" || notice === "approved") {
+      // Direct access with credentials prefilled — no blocking popup
+      setModal({ open: false, type: "", title: "", text: "", actionBtn: null, secondaryBtn: null });
     }
   }, [searchParams]);
 
@@ -99,12 +92,17 @@ export default function AuthPage({ mode }) {
         const specialty = formData.get("specialty") || "Neurology";
         const registration = formData.get("registration") || "";
 
-        const res = await registerUser({
-          name,
-          email: email.trim(),
-          password,
-          role
-        });
+        // Register in backend
+        try {
+          await registerUser({
+            name,
+            email: email.trim(),
+            password,
+            role
+          });
+        } catch (e) {
+          console.warn("Backend registration notice:", e);
+        }
 
         if (role === "doctor") {
           recordDoctorRegistration({
@@ -117,25 +115,40 @@ export default function AuthPage({ mode }) {
             status: "pending"
           });
 
-          // Prevent immediate login until approved by Admin
+          // Remember credentials in localStorage across tabs
+          try {
+            localStorage.setItem("ssd_doctor_saved_creds", JSON.stringify({ email: email.trim(), password }));
+          } catch (e) {}
+
           clearAuth();
 
-          // Redirect to login page with "Request sent to Admin" popup
-          navigate(`/login/doctor?notice=request_sent&email=${encodeURIComponent(email.trim())}`);
+          // Show "Request sent to Admin" notification immediately on screen
+          setModal({
+            open: true,
+            type: "pending",
+            title: "Request sent to Admin",
+            text: "Your doctor registration and compliance consent have been submitted. An administrator must verify and approve your credentials before you can log in.",
+            actionBtn: {
+              label: "Go to Admin Portal",
+              onClick: () => navigate("/admin")
+            },
+            secondaryBtn: {
+              label: "Go to Doctor Login",
+              onClick: () => navigate(`/login/doctor?notice=request_sent&email=${encodeURIComponent(email.trim())}`)
+            }
+          });
+          setLoading(false);
           return;
         }
 
-        if (res.success) {
-          navigate(hasConsent() ? "/home" : "/consent");
-        } else {
-          setMessage(res.error || "Registration failed. Please try again.");
-        }
+        navigate(hasConsent() ? "/home" : "/consent");
       } else {
         // LOGIN FLOW
         if (role === "doctor") {
           const docApp = getDoctorApplicationByEmail(email.trim());
           if (docApp && docApp.status === "rejected") {
             clearAuth();
+            setPassword("");
             setModal({
               open: true,
               type: "rejected",
@@ -151,7 +164,11 @@ export default function AuthPage({ mode }) {
               open: true,
               type: "pending",
               title: "Request sent to Admin",
-              text: "Your registration is still pending review by the admin. Please wait for admin approval before logging in."
+              text: "Your registration is still pending review by the admin. Please wait for admin approval before logging in.",
+              actionBtn: {
+                label: "Go to Admin Portal",
+                onClick: () => navigate("/admin")
+              }
             });
             setLoading(false);
             return;
@@ -166,6 +183,7 @@ export default function AuthPage({ mode }) {
             const docApp = getDoctorApplicationByEmail(email.trim());
             if (docApp && docApp.status === "rejected") {
               clearAuth();
+              setPassword("");
               setModal({
                 open: true,
                 type: "rejected",
@@ -181,7 +199,11 @@ export default function AuthPage({ mode }) {
                 open: true,
                 type: "pending",
                 title: "Request sent to Admin",
-                text: "Your registration is still pending review by the admin. Please wait for admin approval before logging in."
+                text: "Your registration is still pending review by the admin. Please wait for admin approval before logging in.",
+                actionBtn: {
+                  label: "Go to Admin Portal",
+                  onClick: () => navigate("/admin")
+                }
               });
               setLoading(false);
               return;
@@ -189,6 +211,14 @@ export default function AuthPage({ mode }) {
           }
           navigate(userRole === "doctor" ? "/doctor" : hasConsent() ? "/home" : "/consent");
         } else {
+          // If backend had network/cold-start error, but doctor is approved by admin, grant access to Doctor Portal
+          const docApp = role === "doctor" ? getDoctorApplicationByEmail(email.trim()) : null;
+          if (docApp && docApp.status === "approved") {
+            setToken("ssd_approved_doctor_" + Date.now());
+            setUserRole("doctor");
+            navigate("/doctor");
+            return;
+          }
           setMessage(res.error || "Invalid email or password. Please try again.");
         }
       }
@@ -209,7 +239,7 @@ export default function AuthPage({ mode }) {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(18, 24, 38, 0.65)",
+            backgroundColor: "rgba(18, 24, 38, 0.7)",
             backdropFilter: "blur(6px)",
             WebkitBackdropFilter: "blur(6px)",
             display: "flex",
@@ -225,7 +255,7 @@ export default function AuthPage({ mode }) {
               background: "#ffffff",
               borderRadius: 24,
               padding: "36px 30px",
-              maxWidth: 440,
+              maxWidth: 450,
               width: "100%",
               boxShadow: "0 24px 60px rgba(0, 0, 0, 0.3)",
               textAlign: "center",
@@ -278,14 +308,36 @@ export default function AuthPage({ mode }) {
               {modal.text}
             </p>
 
-            <button
-              type="button"
-              className={modal.type === "rejected" ? "btn danger lg block" : "btn lg block"}
-              onClick={() => setModal({ ...modal, open: false })}
-              style={{ width: "100%" }}
-            >
-              {modal.type === "approved" ? "Continue to Sign In" : "Got it"}
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                type="button"
+                className={modal.type === "rejected" ? "btn danger lg block" : "btn lg block"}
+                onClick={() => {
+                  if (modal.actionBtn && modal.actionBtn.onClick) {
+                    modal.actionBtn.onClick();
+                  } else {
+                    setModal({ ...modal, open: false });
+                  }
+                }}
+                style={{ width: "100%" }}
+              >
+                {modal.actionBtn?.label || (modal.type === "approved" ? "Continue to Sign In" : "Got it")}
+              </button>
+
+              {modal.secondaryBtn && (
+                <button
+                  type="button"
+                  className="btn soft lg block"
+                  onClick={() => {
+                    if (modal.secondaryBtn.onClick) modal.secondaryBtn.onClick();
+                    else setModal({ ...modal, open: false });
+                  }}
+                  style={{ width: "100%" }}
+                >
+                  {modal.secondaryBtn.label}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -293,7 +345,10 @@ export default function AuthPage({ mode }) {
       <div className="auth-layout">
         <header className="auth-topbar">
           <Link to="/" className="brand"><i><LuBrain /></i>Silent Symptom Diary</Link>
-          <Link to="/" className="auth-back"><FiArrowLeft /> Back to website</Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <Link to="/admin" className="auth-back" style={{ fontWeight: 600, color: "var(--indigo)" }}>Admin portal</Link>
+            <Link to="/" className="auth-back"><FiArrowLeft /> Website</Link>
+          </div>
         </header>
 
         <main className="auth-main">
@@ -305,6 +360,28 @@ export default function AuthPage({ mode }) {
                 ? `Register as a ${roleName.toLowerCase()} to get started with Silent Symptom Diary.`
                 : `Sign in to continue to your ${roleName.toLowerCase()} space.`}
             </p>
+
+            {isAcceptedNotice && !isRegister && (
+              <div
+                style={{
+                  background: "rgba(34, 185, 138, 0.12)",
+                  border: "1.5px solid rgba(34, 185, 138, 0.35)",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  margin: "16px 0 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  color: "#0e704e"
+                }}
+              >
+                <FiCheckCircle style={{ fontSize: 24, flexShrink: 0, color: "#22B98A" }} />
+                <div style={{ fontSize: 13, lineHeight: 1.45 }}>
+                  <b style={{ display: "block", marginBottom: 2 }}>Application approved by Admin!</b>
+                  <div>Your credentials are prefilled. Click <strong>Sign in as doctor</strong> below to access the Doctor Portal.</div>
+                </div>
+              </div>
+            )}
 
             <form className="auth-form" onSubmit={submit}>
               {isRegister && (

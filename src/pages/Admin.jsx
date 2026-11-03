@@ -56,15 +56,17 @@ export default function Admin() {
   }, [applications, filter, search]);
 
   function review(id, status, application) {
-    updateDoctorApplicationStatus(id, status);
-    setApplications(getDoctorApplications());
+    const updated = updateDoctorApplicationStatus(id, status);
+    setApplications(updated || getDoctorApplications());
 
-    if (status === "approved" && application?.email) {
-      navigate(`/login/doctor?notice=approved&email=${encodeURIComponent(application.email)}`);
-    } else if (status === "rejected" && application?.email) {
-      navigate(`/login/doctor?notice=rejected&email=${encodeURIComponent(application.email)}`);
+    const appEmail = application?.email || (updated && updated.find((a) => a.id === id)?.email);
+
+    if (status === "approved" && appEmail) {
+      navigate(`/login/doctor?notice=accepted&email=${encodeURIComponent(appEmail)}`);
+    } else if (status === "rejected" && appEmail) {
+      navigate(`/login/doctor?notice=rejected&email=${encodeURIComponent(appEmail)}`);
     } else {
-      const label = status === "approved" ? "verified and approved" : status === "rejected" ? "rejected" : "moved to pending";
+      const label = status === "approved" ? "accepted and approved" : status === "rejected" ? "rejected" : "moved to pending";
       setMessage(`Application ${id} ${label}. Doctor record updated.`);
     }
   }
@@ -225,31 +227,57 @@ export default function Admin() {
                   <div className="admin-actions">
                     {st === "pending" && (
                       <>
-                        <button type="button" className="btn" onClick={() => review(application.id, "approved", application)}>
-                          <FiCheck /> Verify & Approve Doctor
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{ background: "#22B98A", borderColor: "#22B98A", color: "#ffffff" }}
+                          onClick={() => review(application.id, "approved", application)}
+                        >
+                          <FiCheck /> Accept Application
                         </button>
-                        <button type="button" className="btn danger" onClick={() => review(application.id, "rejected", application)}>
+                        <button
+                          type="button"
+                          className="btn danger"
+                          onClick={() => review(application.id, "rejected", application)}
+                        >
                           <FiX /> Reject Application
                         </button>
                       </>
                     )}
                     {st === "approved" && (
                       <>
-                        <button type="button" className="btn soft" onClick={() => review(application.id, "pending", application)}>
-                          <FiClock /> Revert to Pending
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => navigate(`/login/doctor?notice=accepted&email=${encodeURIComponent(application.email)}`)}
+                        >
+                          Return to Doctor Login
                         </button>
-                        <button type="button" className="btn danger" onClick={() => review(application.id, "rejected", application)}>
-                          <FiX /> Revoke Verification
+                        <button
+                          type="button"
+                          className="btn danger"
+                          onClick={() => review(application.id, "rejected", application)}
+                        >
+                          <FiX /> Reject Application
                         </button>
                       </>
                     )}
                     {st === "rejected" && (
                       <>
-                        <button type="button" className="btn" onClick={() => review(application.id, "approved", application)}>
-                          <FiCheck /> Re-evaluate & Approve
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{ background: "#22B98A", borderColor: "#22B98A", color: "#ffffff" }}
+                          onClick={() => review(application.id, "approved", application)}
+                        >
+                          <FiCheck /> Accept Application
                         </button>
-                        <button type="button" className="btn soft" onClick={() => review(application.id, "pending", application)}>
-                          <FiClock /> Move to Pending
+                        <button
+                          type="button"
+                          className="btn soft"
+                          onClick={() => navigate(`/login/doctor?notice=rejected&email=${encodeURIComponent(application.email)}`)}
+                        >
+                          View Rejection Notice
                         </button>
                       </>
                     )}

@@ -207,7 +207,7 @@ export function recordDoctorRegistration(doctor) {
     consentReached: true,
     consentAt: doctor.consentAt || new Date().toISOString(),
     submittedAt: doctor.submittedAt || (existingIndex >= 0 ? all[existingIndex].submittedAt : new Date().toISOString()),
-    status: (existingIndex >= 0 && all[existingIndex].status) ? all[existingIndex].status : "pending"
+    status: doctor.status || "pending"
   };
 
   if (existingIndex >= 0) {
@@ -227,7 +227,12 @@ export function recordDoctorRegistration(doctor) {
 
 export function updateDoctorApplicationStatus(id, status) {
   const all = read(STORE.doctorApplications, []);
-  const updated = all.map((app) => app.id === id ? { ...app, status, reviewedAt: new Date().toISOString() } : app);
+  const normalizedId = String(id).toLowerCase();
+  const updated = all.map((app) => 
+    (app.id === id || (app.email && app.email.toLowerCase() === normalizedId))
+      ? { ...app, status, reviewedAt: new Date().toISOString() }
+      : app
+  );
   write(STORE.doctorApplications, updated);
   try {
     window.dispatchEvent(new CustomEvent("doctor:statusChanged", { detail: { id, status } }));
