@@ -190,16 +190,16 @@ export default function PatientDetail() {
               <div style={{ background: "var(--lav2)", padding: 16, borderRadius: 16, border: "1.5px solid var(--lav3)" }}>
                 <b style={{ color: "#FF9F43", display: "block", marginBottom: 6 }}>Typing Rhythm</b>
                 <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-                  <div>Speed: <strong>{Number.isFinite(latestDetails.typing_speed) ? `${Number(latestDetails.typing_speed).toFixed(1)} WPM` : "Recorded"}</strong></div>
-                  <div>Inter-key Gap: <strong>{latestEntry.typing ? `${latestEntry.typing} ms` : "Normal"}</strong></div>
-                  <div>Key Hold: <strong>{Number.isFinite(latestDetails.key_hold_time_avg_ms) ? `${Math.round(latestDetails.key_hold_time_avg_ms)} ms` : "Normal"}</strong></div>
+                  <div>Speed: <strong>{Number.isFinite(latestDetails.typing_speed) && latestDetails.typing_speed > 0 ? `${Number(latestDetails.typing_speed).toFixed(1)} WPM` : "Unavailable"}</strong></div>
+                  <div>Inter-key Gap: <strong>{Number.isFinite(latestEntry.typing) && latestEntry.typing > 0 ? `${latestEntry.typing} ms` : "Unavailable"}</strong></div>
+                  <div>Key Hold: <strong>{Number.isFinite(latestDetails.key_hold_time_avg_ms) && latestDetails.key_hold_time_avg_ms > 0 ? `${Math.round(latestDetails.key_hold_time_avg_ms)} ms` : "Unavailable"}</strong></div>
                   <div>Errors: <strong>{latestDetails.typing_errors ?? 0}</strong></div>
                 </div>
               </div>
               <div style={{ background: "var(--lav2)", padding: 16, borderRadius: 16, border: "1.5px solid var(--lav3)" }}>
                 <b style={{ color: "#5B61EC", display: "block", marginBottom: 6 }}>Phone Motion</b>
                 <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-                  <div>Variability: <strong>{Number.isFinite(latestDetails.motion_variability) ? Number(latestDetails.motion_variability).toFixed(3) : (latestEntry.tremor ? Number(latestEntry.tremor).toFixed(3) : "Recorded")} m/s²</strong></div>
+                  <div>Variability: <strong>{Number.isFinite(latestDetails.motion_variability) && latestDetails.motion_variability > 0 ? `${Number(latestDetails.motion_variability).toFixed(3)} m/s²` : (Number.isFinite(latestEntry.tremor) && latestEntry.tremor > 0 ? `${Number(latestEntry.tremor).toFixed(3)} m/s²` : "Unavailable")}</strong></div>
                   <div>Sensor: <strong>{latestEntry.source?.tremor || "On-device accelerometer"}</strong></div>
                 </div>
               </div>

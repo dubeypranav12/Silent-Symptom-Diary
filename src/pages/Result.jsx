@@ -90,10 +90,10 @@ export default function Result() {
           <article className="criteria-card">
             <span className="criteria-index">02 · TYPING</span>
             <h3>Typing rhythm</h3>
-            <p className="criteria-value">{Number.isFinite(details.typing_speed) ? `${Number(details.typing_speed).toFixed(1)} WPM` : "Unavailable"} <span>typing speed</span></p>
+            <p className="criteria-value">{Number.isFinite(details.typing_speed) && details.typing_speed > 0 ? `${Number(details.typing_speed).toFixed(1)} WPM` : "Unavailable"} <span>typing speed</span></p>
             <dl className="criteria-details">
               <div><dt>Errors count</dt><dd>{Number.isFinite(details.typing_errors) ? details.typing_errors : "Unavailable"}</dd></div>
-              <div><dt>Key holds</dt><dd>{Number.isFinite(details.key_hold_time_avg_ms) ? `${Number(details.key_hold_time_avg_ms).toFixed(1)} ms average` : "Unavailable"}</dd></div>
+              <div><dt>Key holds</dt><dd>{Number.isFinite(details.key_hold_time_avg_ms) && details.key_hold_time_avg_ms > 0 ? `${Number(details.key_hold_time_avg_ms).toFixed(1)} ms average` : "Unavailable"}</dd></div>
             </dl>
             <p className="criteria-judged"><b>Used for judgment:</b> inter-key timing compared with your baseline.</p>
             <p className="criteria-caption">Typed characters are not retained. Key timing is used only to calculate numeric features.</p>
@@ -102,7 +102,7 @@ export default function Result() {
           <article className="criteria-card">
             <span className="criteria-index">03 · MOTION</span>
             <h3>Phone motion</h3>
-            <p className="criteria-value">{Number.isFinite(details.motion_variability) ? Number(details.motion_variability).toFixed(3) : measured("tremor", 3)} <span>m/s² variability</span></p>
+            <p className="criteria-value">{Number.isFinite(details.motion_variability) && details.motion_variability > 0 ? Number(details.motion_variability).toFixed(3) : (Number.isFinite(a.latest.entry.tremor) && a.latest.entry.tremor > 0 ? Number(a.latest.entry.tremor).toFixed(3) : "Unavailable")} <span>m/s² variability</span></p>
             <p>We calculate the variability in phone motion during the 10-second hold. Raw motion samples are not stored.</p>
             <p className="criteria-judged"><b>Used for judgment:</b> motion variability compared with your baseline.</p>
           </article>

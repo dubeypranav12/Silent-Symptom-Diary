@@ -33,7 +33,25 @@ export function useCheckins() {
 
           const mergedMap = new Map();
           getCheckins().forEach((entry) => mergedMap.set(entry.date, entry));
-          normalized.forEach((entry) => mergedMap.set(entry.date, entry));
+          normalized.forEach((serverEntry) => {
+            const local = mergedMap.get(serverEntry.date);
+            if (local) {
+              mergedMap.set(serverEntry.date, {
+                ...serverEntry,
+                tremor: (Number.isFinite(serverEntry.tremor) && serverEntry.tremor > 0) ? serverEntry.tremor : local.tremor,
+                typing: (Number.isFinite(serverEntry.typing) && serverEntry.typing > 0) ? serverEntry.typing : local.typing,
+                speech: Number.isFinite(serverEntry.speech) ? serverEntry.speech : local.speech,
+                details: {
+                  ...(local.details || {}),
+                  ...(serverEntry.details || {}),
+                  typing_speed: (serverEntry.details?.typing_speed > 0) ? serverEntry.details.typing_speed : (local.details?.typing_speed ?? null),
+                  motion_variability: (serverEntry.details?.motion_variability > 0) ? serverEntry.details.motion_variability : (local.details?.motion_variability ?? null)
+                }
+              });
+            } else {
+              mergedMap.set(serverEntry.date, serverEntry);
+            }
+          });
 
           const mergedList = Array.from(mergedMap.values()).sort((a, b) => a.date.localeCompare(b.date));
           write(STORE.checkins, mergedList);

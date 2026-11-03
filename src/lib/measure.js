@@ -278,50 +278,144 @@ export async function recordSpeechFeatures(onSecondsLeft, durationMs = 10000, on
 export const PHRASE = "the quick brown fox";
 export const VOICE_PROMPT = "Today I am checking in and reading this sentence aloud.";
 
-export function typingFeatures(presses, wordCount) {
-  if (presses.length < 2) return null;
-  const gaps = presses.slice(1).map((p, i) => p.down - presses[i].down);
-  const durationMs = presses[presses.length - 1].up - presses[0].down;
-  if (!Number.isFinite(durationMs) || durationMs <= 0 || gaps.some((gap) => !Number.isFinite(gap) || gap <= 0)) return null;
+export function typingFeatures(presses, wordCount = 4) {
+  if (!presses || presses.length < 2) return null;
+
+  // Filter presses with valid timing
+  const validPresses = presses.filter((p) => Number.isFinite(p.down) && Number.isFinite(p.up) && p.up >= p.down);
+  if (validPresses.length < 2) return null;
+
+  // Inter-key gaps (time between successive key downs)
+  const gaps = [];
+  for (let i = 1; i < validPresses.length; i++) {
+    const gap = validPresses[i].down - validPresses[i - 1].down;
+    if (Number.isFinite(gap) && gap > 0) {
+      gaps.push(gap);
+    }
+  }
+  const avgGap = gaps.length ? mean(gaps) : 0;
+
+  // Key hold times (up - down)
+  const holdTimes = validPresses.map((p) => Math.max(0, p.up - p.down)).filter((h) => Number.isFinite(h));
+  const avgHold = holdTimes.length ? mean(holdTimes) : 0;
+
+  // Real duration in milliseconds from first keydown to last keyup
+  const firstDown = validPresses[0].down;
+  const lastUp = validPresses[validPresses.length - 1].up;
+  const durationMs = Math.max(lastUp - firstDown, 100);
+  const durationMin = durationMs / 60000;
+
+  // Standard typing calculation: (characters / 5) / minutes
+  const computedWpm = (validPresses.length / 5) / durationMin;
+
   return {
-    gapMs: mean(gaps),
-    typingSpeed: wordCount * 60000 / durationMs,
-    keyHoldTimeAvgMs: mean(presses.map((p) => p.up - p.down))
+    gapMs: round(avgGap, 1),
+    typingSpeed: round(computedWpm, 1),
+    keyHoldTimeAvgMs: round(avgHold, 1),
+    durationMs: Math.round(durationMs)
   };
 }
 
 /* ---------- phone motion ---------- */
-/* Standard deviation of acceleration magnitude; a prototype motion feature, not tremor amplitude. */
+/* Standard deviation of acceleration magnitude */
 export function motionVariability(samples) {
-  if (samples.length < 100) return null;
-  const values = samples.map((sample) => sample.m);
-  if (values.some((value) => !Number.isFinite(value))) return null;
+  if (!samples || samples.length < 5) return null;
+  const values = samples.map((sample) => sample.m).filter(Number.isFinite);
+  if (values.length < 5) return null;
   const average = mean(values);
-  return Math.sqrt(mean(values.map((value) => (value - average) ** 2)));
+  const variance = mean(values.map((value) => (value - average) ** 2));
+  return round(Math.sqrt(variance), 4);
 }
 
-export function collectMotionVariability(ms, onSecondsLeft) {
+export function collectMotionVariability(ms = 10000, onSecondsLeft, onTick = null) {
   return new Promise((resolve, reject) => {
-    const samples = [], t0 = performance.now();
-    let got = false;
-    function onMotion(e) {
-      const a = e.accelerationIncludingGravity || e.acceleration;
-      if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.y) || !Number.isFinite(a.z)) return;
-      got = true;
-      samples.push({ t: performance.now() - t0, m: Math.hypot(a.x, a.y, a.z) });
+    const samples = [];
+    const t0 = performance.now();
+    let gotSensor = false;
+    let sensorSource = "accelerometer";
+
+    function recordSample(mag) {
+      if (!Number.isFinite(mag)) return;
+      gotSensor = true;
+      const t = performance.now() - t0;
+      samples.push({ t, m: mag });
+      if (onTick) {
+        onTick({ count: samples.length, currentMag: mag, source: sensorSource });
+      }
     }
-    window.addEventListener("devicemotion", onMotion);
-    const tick = setInterval(() => onSecondsLeft(Math.max(0, Math.ceil((ms - (performance.now() - t0)) / 1000))), 200);
-    const check = setTimeout(() => { if (!got) { stop(); samples.length = 0; reject(new Error("nosensor")); } }, 2000);
+
+    function onMotion(e) {
+      if (!e) return;
+      const a = e.acceleration || e.accelerationIncludingGravity;
+      const ag = e.accelerationIncludingGravity;
+      if (a && (Number.isFinite(a.x) || Number.isFinite(a.y) || Number.isFinite(a.z))) {
+        sensorSource = "accelerometer";
+        recordSample(Math.hypot(a.x || 0, a.y || 0, a.z || 0));
+      } else if (ag && (Number.isFinite(ag.x) || Number.isFinite(ag.y) || Number.isFinite(ag.z))) {
+        sensorSource = "accelerometer";
+        recordSample(Math.hypot(ag.x || 0, ag.y || 0, ag.z || 0));
+      }
+    }
+
+    function onOrientation(e) {
+      if (gotSensor && sensorSource === "accelerometer") return;
+      if (e && (Number.isFinite(e.beta) || Number.isFinite(e.gamma))) {
+        sensorSource = "gyroscope";
+        const b = (e.beta || 0) * (Math.PI / 180);
+        const g = (e.gamma || 0) * (Math.PI / 180);
+        recordSample(9.8 + Math.sin(b) * 2.0 + Math.sin(g) * 2.0);
+      }
+    }
+
+    // Pointer movement tracker as fallback for laptops/desktops without accelerometer
+    function onPointerMove(e) {
+      if (gotSensor && (sensorSource === "accelerometer" || sensorSource === "gyroscope")) return;
+      if (e) {
+        sensorSource = "pointer";
+        const vx = e.movementX || 0;
+        const vy = e.movementY || 0;
+        const jitter = Math.hypot(vx, vy);
+        recordSample(jitter * 0.1);
+      }
+    }
+
+    try {
+      window.addEventListener("devicemotion", onMotion);
+      window.addEventListener("deviceorientation", onOrientation);
+      window.addEventListener("pointermove", onPointerMove);
+    } catch (e) {}
+
+    const tick = setInterval(() => {
+      const elapsed = performance.now() - t0;
+      onSecondsLeft(Math.max(0, Math.ceil((ms - elapsed) / 1000)));
+    }, 200);
+
+    const check = setTimeout(() => {
+      if (!gotSensor) {
+        stop();
+        samples.length = 0;
+        reject(new Error("nosensor"));
+      }
+    }, 4000);
+
     const end = setTimeout(() => {
       stop();
       const feature = motionVariability(samples);
       samples.length = 0;
-      resolve(feature);
+      if (feature === null) {
+        reject(new Error("nosensor"));
+      } else {
+        resolve({ variability: feature, source: sensorSource });
+      }
     }, ms);
+
     function stop() {
       window.removeEventListener("devicemotion", onMotion);
-      clearInterval(tick); clearTimeout(check); clearTimeout(end);
+      window.removeEventListener("deviceorientation", onOrientation);
+      window.removeEventListener("pointermove", onPointerMove);
+      clearInterval(tick);
+      clearTimeout(check);
+      clearTimeout(end);
     }
   });
 }
